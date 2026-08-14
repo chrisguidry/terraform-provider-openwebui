@@ -49,8 +49,8 @@ these four resources to need work.
 terraform {
   required_providers {
     openwebui = {
-      source  = "docktape/openwebui"
-      version = "~> 1.0"
+      source  = "chrisguidry/openwebui"
+      version = "~> 1.2"
     }
   }
 }
