@@ -29,10 +29,11 @@ data "openwebui_knowledge" "faq" {
 ### Read-Only
 
 - `created_at` (String) Creation date in `YYYY-MM-DD` format.
-- `data_json` (String) JSON data blob associated with the knowledge base as returned by Open WebUI.
 - `description` (String) Description returned by Open WebUI.
+- `file_count` (Number) Number of files attached to the knowledge base.
 - `id` (String) UUID of the knowledge base. Set after lookup.
-- `meta_json` (String) JSON metadata blob associated with the knowledge base as returned by Open WebUI.
+- `public_read` (Boolean) Whether every signed-in user can read the knowledge base.
+- `public_write` (Boolean) Whether every signed-in user can edit the knowledge base.
 - `read_groups` (List of String) Read-access group names currently applied to this knowledge base.
 - `updated_at` (String) Last-updated date in `YYYY-MM-DD` format.
 - `user_id` (String) Owner user identifier.

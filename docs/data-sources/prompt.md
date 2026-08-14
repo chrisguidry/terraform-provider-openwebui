@@ -31,9 +31,10 @@ data "openwebui_prompt" "summarize" {
 - `created_at` (String) Creation date in `YYYY-MM-DD` format.
 - `data_json` (String) Arbitrary JSON metadata object for the prompt.
 - `id` (String) Server-assigned UUID for the prompt.
-- `is_active` (Boolean) Whether the prompt is active and available to users.
 - `meta_json` (String) Arbitrary JSON metadata object for the prompt.
 - `name` (String) Display name of the prompt.
+- `public_read` (Boolean) Whether every signed-in user can read the prompt.
+- `public_write` (Boolean) Whether every signed-in user can edit the prompt.
 - `read_groups` (List of String) Read-access group names currently applied to this prompt.
 - `tags` (List of String) List of tags for categorising the prompt.
 - `updated_at` (String) Last-updated date in `YYYY-MM-DD` format.

@@ -17,14 +17,23 @@ type ImportConfigForm struct {
 	Config map[string]any `json:"config"`
 }
 
-// OAuthClientRegistrationForm registers an OAuth client.
+// OAuthClientRegistrationForm registers an OAuth client. A form carrying
+// ClientSecret takes the static-credentials branch of the handler, which builds
+// the registration from the credentials instead of running dynamic client
+// registration against the provider. OAuthServerURL points the registration at
+// an authorization server that differs from the resource URL.
 type OAuthClientRegistrationForm struct {
-	URL        string  `json:"url"`
-	ClientID   string  `json:"client_id"`
-	ClientName *string `json:"client_name,omitempty"`
+	URL            string  `json:"url"`
+	ClientID       string  `json:"client_id"`
+	ClientName     *string `json:"client_name,omitempty"`
+	ClientSecret   *string `json:"client_secret,omitempty"`
+	OAuthServerURL *string `json:"oauth_server_url,omitempty"`
+	OAuthScope     *string `json:"oauth_scope,omitempty"`
 }
 
-// ToolServerConnection captures a tool server connection entry.
+// ToolServerConnection captures a tool server connection entry. Info holds the
+// OAuth client the server reads through connection['info']['id'], so a write
+// that omits it unlinks the connection from its OAuth client.
 type ToolServerConnection struct {
 	URL      string         `json:"url"`
 	Path     string         `json:"path"`
@@ -33,6 +42,7 @@ type ToolServerConnection struct {
 	Headers  any            `json:"headers,omitempty"`
 	Key      *string        `json:"key"`
 	Config   map[string]any `json:"config"`
+	Info     map[string]any `json:"info,omitempty"`
 }
 
 // ToolServersConfigForm captures tool server configuration.
@@ -59,11 +69,16 @@ type CodeInterpreterConfigForm struct {
 	CodeInterpreterJupyterTimeout      *int64  `json:"CODE_INTERPRETER_JUPYTER_TIMEOUT"`
 }
 
-// ModelsConfigForm captures default model configuration.
+// ModelsConfigForm captures default model configuration. All five fields of
+// ModelsConfigForm in backend/open_webui/routers/configs.py are present, because
+// the handler writes every field of the form it receives. A field the provider
+// leaves out of the request is written as null, which erases it.
 type ModelsConfigForm struct {
-	DefaultModels       *string  `json:"DEFAULT_MODELS"`
-	DefaultPinnedModels *string  `json:"DEFAULT_PINNED_MODELS"`
-	ModelOrderList      []string `json:"MODEL_ORDER_LIST"`
+	DefaultModels        *string        `json:"DEFAULT_MODELS"`
+	DefaultPinnedModels  *string        `json:"DEFAULT_PINNED_MODELS"`
+	ModelOrderList       []string       `json:"MODEL_ORDER_LIST"`
+	DefaultModelMetadata map[string]any `json:"DEFAULT_MODEL_METADATA"`
+	DefaultModelParams   map[string]any `json:"DEFAULT_MODEL_PARAMS"`
 }
 
 // PromptSuggestion captures a default prompt suggestion.

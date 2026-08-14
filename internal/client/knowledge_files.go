@@ -12,43 +12,34 @@ type KnowledgeFileIDForm struct {
 	FileID string `json:"file_id"`
 }
 
+// knowledgeFilesPageSize mirrors the backend PAGE_ITEM_COUNT for
+// GET /knowledge/{id}/files.
+const knowledgeFilesPageSize = 30
+
 // KnowledgeFileListResponse captures paginated file results for a knowledge base.
 type KnowledgeFileListResponse struct {
 	Items []FileUserResponse `json:"items"`
 	Total int                `json:"total"`
 }
 
-// FileUserResponse captures file details including user metadata.
+// FileUserResponse captures file details including user metadata. The knowledge
+// file listing defers the file's extracted content, so this record holds
+// metadata only.
 type FileUserResponse struct {
-	ID        string         `json:"id"`
-	UserID    string         `json:"user_id"`
-	Hash      *string        `json:"hash,omitempty"`
-	Filename  string         `json:"filename"`
-	Data      map[string]any `json:"data,omitempty"`
-	Meta      FileMeta       `json:"meta"`
-	CreatedAt int64          `json:"created_at"`
-	UpdatedAt int64          `json:"updated_at"`
-	User      *User          `json:"user,omitempty"`
+	ID        string   `json:"id"`
+	UserID    string   `json:"user_id"`
+	Hash      *string  `json:"hash,omitempty"`
+	Filename  string   `json:"filename"`
+	Meta      FileMeta `json:"meta"`
+	CreatedAt int64    `json:"created_at"`
+	UpdatedAt int64    `json:"updated_at"`
+	User      *User    `json:"user,omitempty"`
 }
 
-// ListKnowledgeFiles retrieves file attachments for a knowledge base.
-func (c *Client) ListKnowledgeFiles(ctx context.Context, knowledgeID string, queryValue string, viewOption string, orderBy string, direction string, page int) (*KnowledgeFileListResponse, error) {
+// getKnowledgeFilePage reads one page of a knowledge base's file attachments.
+func (c *Client) getKnowledgeFilePage(ctx context.Context, knowledgeID string, page int) (*KnowledgeFileListResponse, error) {
 	query := url.Values{}
-	if queryValue != "" {
-		query.Set("query", queryValue)
-	}
-	if viewOption != "" {
-		query.Set("view_option", viewOption)
-	}
-	if orderBy != "" {
-		query.Set("order_by", orderBy)
-	}
-	if direction != "" {
-		query.Set("direction", direction)
-	}
-	if page > 0 {
-		query.Set("page", fmt.Sprintf("%d", page))
-	}
+	query.Set("page", fmt.Sprintf("%d", page))
 
 	var resp KnowledgeFileListResponse
 	path := fmt.Sprintf("knowledge/%s/files", url.PathEscape(knowledgeID))
@@ -57,6 +48,38 @@ func (c *Client) ListKnowledgeFiles(ctx context.Context, knowledgeID string, que
 	}
 
 	return &resp, nil
+}
+
+// ListKnowledgeFiles retrieves every file attached to a knowledge base, paging
+// until the server runs out of items. The route caps a page at 30 files, so a
+// single request sees only part of a large knowledge base.
+func (c *Client) ListKnowledgeFiles(ctx context.Context, knowledgeID string) ([]FileUserResponse, error) {
+	var all []FileUserResponse
+	for page := 1; ; page++ {
+		resp, err := c.getKnowledgeFilePage(ctx, knowledgeID, page)
+		if err != nil {
+			return nil, err
+		}
+
+		all = append(all, resp.Items...)
+		if len(resp.Items) < knowledgeFilesPageSize || len(all) >= resp.Total {
+			break
+		}
+	}
+
+	return all, nil
+}
+
+// CountKnowledgeFiles returns the number of files attached to a knowledge base.
+// The count comes from the listing's total, which the server computes before it
+// paginates.
+func (c *Client) CountKnowledgeFiles(ctx context.Context, knowledgeID string) (int, error) {
+	resp, err := c.getKnowledgeFilePage(ctx, knowledgeID, 1)
+	if err != nil {
+		return 0, err
+	}
+
+	return resp.Total, nil
 }
 
 // AddKnowledgeFile associates a file with a knowledge base.

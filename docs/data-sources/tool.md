@@ -30,9 +30,12 @@ data "openwebui_tool" "scraper" {
 - `content` (String) Python source code of the tool.
 - `created_at` (Number) Unix timestamp of creation.
 - `description` (String) Short description of the tool.
+- `has_user_valves` (Boolean) Whether the tool source declares a `UserValves` class.
 - `id` (String) UUID assigned by Open WebUI.
 - `manifest_json` (String) JSON manifest derived from the tool's frontmatter.
 - `name` (String) Display name of the tool.
+- `public_read` (Boolean) Whether every signed-in user can read the tool.
+- `public_write` (Boolean) Whether every signed-in user can edit the tool.
 - `read_groups` (List of String) Read-access group names currently applied to this tool.
 - `specs_json` (String) JSON OpenAPI-style specification of the tool's functions.
 - `updated_at` (Number) Unix timestamp of last update.

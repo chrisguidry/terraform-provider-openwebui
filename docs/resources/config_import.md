@@ -3,13 +3,19 @@
 page_title: "openwebui_config_import Resource - openwebui"
 subcategory: ""
 description: |-
-  Restores an Open WebUI configuration from a JSON blob. This is a singleton resource — applying it replaces the entire current configuration.
+  Applies Open WebUI configuration keys from a JSON object. This is a singleton resource.
+  Open WebUI v0.11.0 stores configuration one key per row and merges an import into it, so config_json may hold as few keys as you want to manage. Terraform tracks only the keys config_json names; every other key is left as the server has it, and never enters state.
+  Keys are flat and dotted, such as ui.banners and audio.stt.engine. Open WebUI v0.9.x exported a nested tree instead, so a config_json captured from v0.9.x writes rows named ui and code_execution that nothing reads. The provider rejects that shape.
   ~> Warning: config_json may contain secrets. Treat the Terraform state for this resource as sensitive.
 ---
 
 # openwebui_config_import (Resource)
 
-Restores an Open WebUI configuration from a JSON blob. This is a singleton resource — applying it replaces the entire current configuration.
+Applies Open WebUI configuration keys from a JSON object. This is a singleton resource.
+
+Open WebUI v0.11.0 stores configuration one key per row and merges an import into it, so `config_json` may hold as few keys as you want to manage. Terraform tracks only the keys `config_json` names; every other key is left as the server has it, and never enters state.
+
+Keys are flat and dotted, such as `ui.banners` and `audio.stt.engine`. Open WebUI v0.9.x exported a nested tree instead, so a `config_json` captured from v0.9.x writes rows named `ui` and `code_execution` that nothing reads. The provider rejects that shape.
 
 ~> **Warning:** `config_json` may contain secrets. Treat the Terraform state for this resource as sensitive.
 
@@ -28,7 +34,7 @@ resource "openwebui_config_import" "restore" {
 
 ### Required
 
-- `config_json` (String, Sensitive) Full Open WebUI configuration as a JSON string, as produced by the `openwebui_config_export` data source.
+- `config_json` (String, Sensitive) Open WebUI configuration keys to apply, as a JSON object of flat dotted keys. The `openwebui_config_export` data source produces the full set.
 
 ### Read-Only
 

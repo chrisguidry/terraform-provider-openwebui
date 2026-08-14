@@ -12,12 +12,12 @@ import (
 const knowledgeListPageSize = 30
 
 // KnowledgeForm models the payload for creating or updating knowledge records.
+// The API's form carries only these three fields. Anything else is dropped
+// server-side, because the pydantic model rejects extra keys.
 type KnowledgeForm struct {
 	Name          string         `json:"name"`
 	Description   string         `json:"description"`
 	AccessControl map[string]any `json:"-"`
-	Data          map[string]any `json:"data,omitempty"`
-	Meta          map[string]any `json:"meta,omitempty"`
 }
 
 // MarshalJSON serialises the form using the API's access_grants list, derived
@@ -33,7 +33,7 @@ func (f KnowledgeForm) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// FileModel represents a file associated with a knowledge base entry.
+// FileModel is the full file record returned by GET /files/{id}.
 type FileModel struct {
 	ID        string         `json:"id"`
 	UserID    string         `json:"user_id"`
@@ -48,16 +48,15 @@ type FileModel struct {
 
 // KnowledgeResponse captures the core knowledge object returned by create and update endpoints.
 type KnowledgeResponse struct {
-	ID            string         `json:"id"`
-	UserID        string         `json:"user_id"`
-	Name          string         `json:"name"`
-	Description   string         `json:"description"`
-	CreatedAt     int64          `json:"created_at"`
-	UpdatedAt     int64          `json:"updated_at"`
-	AccessControl map[string]any `json:"-"`
-	Data          map[string]any `json:"data,omitempty"`
-	Meta          map[string]any `json:"meta,omitempty"`
-	Files         []FileModel    `json:"files,omitempty"`
+	ID            string                 `json:"id"`
+	UserID        string                 `json:"user_id"`
+	Name          string                 `json:"name"`
+	Description   string                 `json:"description"`
+	CreatedAt     int64                  `json:"created_at"`
+	UpdatedAt     int64                  `json:"updated_at"`
+	AccessControl map[string]any         `json:"-"`
+	Meta          map[string]any         `json:"meta,omitempty"`
+	Files         []FileMetadataResponse `json:"files,omitempty"`
 }
 
 func (r *KnowledgeResponse) UnmarshalJSON(data []byte) error {
@@ -73,18 +72,20 @@ func (r *KnowledgeResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// KnowledgeFilesResponse is returned by the knowledge detail endpoint and includes file metadata.
+// KnowledgeFilesResponse is returned by the knowledge detail endpoint and by the
+// file attach, update, and remove endpoints. Only the file endpoints fill Files
+// in; the detail endpoint answers with a null files key. Use ListKnowledgeFiles
+// to read a knowledge base's attachments.
 type KnowledgeFilesResponse struct {
-	ID            string         `json:"id"`
-	UserID        string         `json:"user_id"`
-	Name          string         `json:"name"`
-	Description   string         `json:"description"`
-	CreatedAt     int64          `json:"created_at"`
-	UpdatedAt     int64          `json:"updated_at"`
-	AccessControl map[string]any `json:"-"`
-	Data          map[string]any `json:"data,omitempty"`
-	Meta          map[string]any `json:"meta,omitempty"`
-	Files         []FileModel    `json:"files"`
+	ID            string                 `json:"id"`
+	UserID        string                 `json:"user_id"`
+	Name          string                 `json:"name"`
+	Description   string                 `json:"description"`
+	CreatedAt     int64                  `json:"created_at"`
+	UpdatedAt     int64                  `json:"updated_at"`
+	AccessControl map[string]any         `json:"-"`
+	Meta          map[string]any         `json:"meta,omitempty"`
+	Files         []FileMetadataResponse `json:"files"`
 }
 
 func (r *KnowledgeFilesResponse) UnmarshalJSON(data []byte) error {
@@ -130,7 +131,6 @@ type KnowledgeListItem struct {
 	CreatedAt     int64          `json:"created_at"`
 	UpdatedAt     int64          `json:"updated_at"`
 	AccessControl map[string]any `json:"-"`
-	Data          map[string]any `json:"data,omitempty"`
 	Meta          map[string]any `json:"meta,omitempty"`
 }
 

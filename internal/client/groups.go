@@ -16,11 +16,13 @@ type GroupForm struct {
 }
 
 // GroupUpdateForm represents the payload for updating an existing group.
+// GroupUpdateForm in backend/open_webui/models/groups.py declares name,
+// description, permissions, and data. It carries no meta field, so a group's
+// meta is readable but not writable.
 type GroupUpdateForm struct {
 	Name        string         `json:"name"`
 	Description string         `json:"description"`
 	Permissions map[string]any `json:"permissions,omitempty"`
-	Meta        map[string]any `json:"meta,omitempty"`
 	Data        map[string]any `json:"data,omitempty"`
 }
 
@@ -33,7 +35,6 @@ type GroupResponse struct {
 	CreatedAt   int64          `json:"created_at"`
 	UpdatedAt   int64          `json:"updated_at"`
 	UserIDs     []string       `json:"user_ids"`
-	AdminIDs    []string       `json:"admin_ids,omitempty"`
 	Permissions map[string]any `json:"permissions,omitempty"`
 	Meta        map[string]any `json:"meta,omitempty"`
 	Data        map[string]any `json:"data,omitempty"`

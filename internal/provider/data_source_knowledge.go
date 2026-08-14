@@ -24,6 +24,7 @@ type knowledgeDataSource struct {
 // knowledgeDataSourceModel embeds the resource fields and adds the lookup identifier.
 type knowledgeDataSourceModel struct {
 	KnowledgeID types.String `tfsdk:"knowledge_id"`
+	FileCount   types.Int64  `tfsdk:"file_count"`
 	knowledgeResourceModel
 }
 
@@ -60,13 +61,9 @@ func (d *knowledgeDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Computed:    true,
 				Description: "Description returned by Open WebUI.",
 			},
-			"data_json": schema.StringAttribute{
+			"file_count": schema.Int64Attribute{
 				Computed:    true,
-				Description: "JSON data blob associated with the knowledge base as returned by Open WebUI.",
-			},
-			"meta_json": schema.StringAttribute{
-				Computed:    true,
-				Description: "JSON metadata blob associated with the knowledge base as returned by Open WebUI.",
+				Description: "Number of files attached to the knowledge base.",
 			},
 			"read_groups": schema.ListAttribute{
 				ElementType: types.StringType,
@@ -77,6 +74,14 @@ func (d *knowledgeDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				ElementType: types.StringType,
 				Computed:    true,
 				Description: "Write-access group names currently applied to this knowledge base.",
+			},
+			"public_read": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Whether every signed-in user can read the knowledge base.",
+			},
+			"public_write": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Whether every signed-in user can edit the knowledge base.",
 			},
 			"created_at": schema.StringAttribute{
 				Computed:    true,
@@ -191,8 +196,17 @@ func (d *knowledgeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
+	// The knowledge detail endpoint answers with a null files key, so the count
+	// comes from the file listing's total.
+	fileCount, err := d.client.CountKnowledgeFiles(ctx, current.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Count knowledge files failed", err.Error())
+		return
+	}
+
 	state := knowledgeDataSourceModel{
 		KnowledgeID:            types.StringValue(current.ID),
+		FileCount:              types.Int64Value(int64(fileCount)),
 		knowledgeResourceModel: model,
 	}
 

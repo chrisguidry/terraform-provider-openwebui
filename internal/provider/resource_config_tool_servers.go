@@ -51,7 +51,16 @@ func (r *toolServersConfigResource) Metadata(_ context.Context, req resource.Met
 // Schema defines the tool servers config schema.
 func (r *toolServersConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages the list of external tool server registrations for Open WebUI.",
+		MarkdownDescription: "Manages the list of external tool server registrations for Open WebUI as a " +
+			"single object.\n\n" +
+			"~> **Note:** `openwebui_tool_servers_config` and `openwebui_tool_server` manage the same list. " +
+			"Use one or the other, never both. `openwebui_tool_server` is the recommended one: it declares one " +
+			"connection at a time, it can adopt a connection made in the web UI, and it preserves every field " +
+			"of a connection that it does not model.\n\n" +
+			"~> **Note:** This resource owns the whole list. A connection missing from `connections` is " +
+			"deleted, and a field of a connection that this resource does not model, such as an inline " +
+			"OpenAPI `spec`, is dropped on write. The encrypted OAuth registration in each connection's " +
+			"`info` is the one exception: it is read back and carried across every write.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -227,7 +236,9 @@ func applyToolServersConfig(ctx context.Context, apiClient *client.Client, plan 
 		return toolServersConfigModel{}, diags
 	}
 
-	updated, err := apiClient.SetToolServersConfig(ctx, client.ToolServersConfigForm{Connections: connections})
+	// The write carries each connection's stored info across, so that it does
+	// not erase the OAuth registration an MCP server authenticates with.
+	updated, err := apiClient.SetToolServerConnectionsPreservingInfo(ctx, connections)
 	if err != nil {
 		diags.AddError("Update tool servers config failed", err.Error())
 		return toolServersConfigModel{}, diags

@@ -85,6 +85,48 @@ func TestBuildAccessControl_WriteOnlyDeduplicatesRead(t *testing.T) {
 	}
 }
 
+func TestWithPublicAccess_NilStaysNilWhenPrivate(t *testing.T) {
+	if result := withPublicAccess(nil, false, false); result != nil {
+		t.Fatalf("expected nil for a private resource with no groups, got %+v", result)
+	}
+}
+
+func TestWithPublicAccess_NilGainsAMapWhenPublic(t *testing.T) {
+	result := withPublicAccess(nil, true, false)
+	if result["public_read"] != true {
+		t.Fatalf("expected public_read=true, got %+v", result)
+	}
+	if result["public_write"] != false {
+		t.Fatalf("expected public_write=false, got %+v", result)
+	}
+}
+
+func TestWithPublicAccess_KeepsGroupSections(t *testing.T) {
+	result := withPublicAccess(buildAccessControl([]string{"g1"}, nil), false, true)
+	if _, ok := result["read"].(map[string]any); !ok {
+		t.Fatalf("expected the read section to survive, got %+v", result)
+	}
+	if result["public_read"] != false {
+		t.Fatalf("expected public_read=false, got %+v", result)
+	}
+	if result["public_write"] != true {
+		t.Fatalf("expected public_write=true, got %+v", result)
+	}
+}
+
+func TestPublicAccessFromControl(t *testing.T) {
+	access := map[string]any{"public_read": true, "public_write": false}
+	if !publicAccessFromControl(access, "read") {
+		t.Fatal("expected public_read=true")
+	}
+	if publicAccessFromControl(access, "write") {
+		t.Fatal("expected public_write=false")
+	}
+	if publicAccessFromControl(nil, "read") {
+		t.Fatal("expected false for a nil access_control map")
+	}
+}
+
 func TestExtractGroupIDsFromAccessControl_Nil(t *testing.T) {
 	ids := extractGroupIDsFromAccessControl(nil, "read")
 	if ids != nil {

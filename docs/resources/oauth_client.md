@@ -16,11 +16,25 @@ Registers an OAuth client with Open WebUI.
 ## Example Usage
 
 ```terraform
+# Dynamic client registration: Open WebUI registers with the provider and keeps
+# the credentials it is issued.
 resource "openwebui_oauth_client" "example" {
   url         = "https://auth.example.com"
   client_id   = "my-terraform-client"
   client_name = "Terraform Managed Client"
-  type        = "confidential"
+  type        = "mcp"
+}
+
+# Static credentials: a client_secret makes Open WebUI build the registration
+# from credentials the identity provider already issued, instead of registering
+# a new one. This is the registration an oauth_2.1_static tool server reads.
+resource "openwebui_oauth_client" "static" {
+  url              = "https://paperless.mcp.example.com"
+  client_id        = "paperless"
+  client_secret    = var.paperless_oauth_client_secret
+  oauth_server_url = "https://auth.example.com"
+  oauth_scope      = "openid profile"
+  type             = "mcp"
 }
 ```
 
@@ -30,13 +44,17 @@ resource "openwebui_oauth_client" "example" {
 ### Required
 
 - `client_id` (String) OAuth client identifier to register. Forces replacement.
-- `url` (String) OAuth provider URL to register the client with.
+- `url` (String) OAuth provider URL to register the client with. Forces replacement.
 
 ### Optional
 
 - `client_name` (String) Optional display name for the OAuth client.
-- `type` (String) OAuth client type, e.g. `confidential` or `public`.
+- `client_secret` (String, Sensitive) OAuth client secret. Setting it makes Open WebUI build the registration from these static credentials instead of running dynamic client registration, which is what an `oauth_2.1_static` tool server needs. Sensitive.
+- `oauth_scope` (String) Space-separated OAuth scopes to request during registration. Open WebUI v0.11.0 and later accept this; older releases ignore it.
+- `oauth_server_url` (String) Authorization server to register with, when it differs from `url`. Defaults to `url`.
+- `type` (String) OAuth client type, e.g. `mcp`. Open WebUI registers the client as `<type>:<client_id>`, which is the name a tool server of that type looks it up by. Forces replacement.
 
 ### Read-Only
 
 - `id` (String) Mirrors `client_id`.
+- `oauth_client_info` (String, Sensitive) Encrypted OAuth client registration returned by Open WebUI. Pass it to the `oauth_client_info` attribute of an `openwebui_tool_server` resource, which is what makes an `oauth_2.1` tool server authenticate. Open WebUI encrypts it with `OAUTH_CLIENT_INFO_ENCRYPTION_KEY`, so Terraform carries the value and cannot read it. Sensitive.

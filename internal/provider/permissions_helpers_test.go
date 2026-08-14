@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"slices"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -36,11 +39,27 @@ func TestFilterPermissionKeys_UnknownKey(t *testing.T) {
 		path.Root("permissions").AtName("workspace"),
 		&diags,
 	)
-	if !diags.HasError() {
-		t.Fatal("expected error diagnostic for unsupported key")
+	if diags.HasError() {
+		t.Fatalf("an unknown key must not be an error: %s", diags)
 	}
-	if len(result) != 0 {
-		t.Fatalf("expected empty result for invalid key, got %v", result)
+	if diags.WarningsCount() != 1 {
+		t.Fatalf("expected one warning for the unknown key, got %d", diags.WarningsCount())
+	}
+	if result["bad_key"] != true {
+		t.Fatalf("expected the unknown key to be sent through, got %v", result)
+	}
+}
+
+func TestFilterPermissionKeys_KnownKeysWarnNothing(t *testing.T) {
+	var diags diag.Diagnostics
+	filterPermissionKeys(
+		"features",
+		map[string]bool{"webhooks": true},
+		path.Root("permissions").AtName("features"),
+		&diags,
+	)
+	if diags.WarningsCount() != 0 {
+		t.Fatalf("expected no warnings for a known key, got %s", diags)
 	}
 }
 
@@ -76,11 +95,17 @@ func TestFilterPermissionResponse_ValidBools(t *testing.T) {
 
 func TestFilterPermissionResponse_NonBool(t *testing.T) {
 	var diags diag.Diagnostics
-	filterPermissionResponse("features", map[string]any{
+	result := filterPermissionResponse("features", map[string]any{
 		"web_search": "yes", // wrong type
 	}, &diags)
-	if !diags.HasError() {
-		t.Fatal("expected error for non-bool value")
+	if diags.HasError() {
+		t.Fatalf("a non-boolean value must not be an error: %s", diags)
+	}
+	if diags.WarningsCount() != 1 {
+		t.Fatalf("expected one warning for the non-boolean value, got %d", diags.WarningsCount())
+	}
+	if len(result) != 0 {
+		t.Fatalf("expected the non-boolean value to be dropped, got %v", result)
 	}
 }
 
@@ -90,27 +115,30 @@ func TestFilterPermissionResponse_UnknownKey(t *testing.T) {
 		"unknown_key": true,
 	}, &diags)
 	if diags.HasError() {
-		t.Fatal("expected unknown keys to be silently skipped, not an error")
+		t.Fatalf("an unknown key must not be an error: %s", diags)
 	}
-	if len(result) != 0 {
-		t.Fatalf("expected empty result for unknown key, got %v", result)
+	if result["unknown_key"] != true {
+		t.Fatalf("expected the unknown key to reach state, got %v", result)
 	}
 }
 
+// A key the config sets must come back out of the response, or the write and the
+// read disagree and the practitioner sees a permanent diff.
 func TestFilterPermissionResponse_MixedKnownAndUnknown(t *testing.T) {
 	var diags diag.Diagnostics
 	result := filterPermissionResponse("workspace", map[string]any{
 		"models":     true,
-		"future_key": false, // unknown — should be silently dropped
+		"future_key": false,
 	}, &diags)
 	if diags.HasError() {
-		t.Fatal("unexpected diagnostics: unknown key should be silently skipped")
+		t.Fatalf("unexpected diagnostics: %s", diags)
 	}
 	if !result["models"] {
 		t.Fatalf("expected models=true, got %v", result)
 	}
-	if _, ok := result["future_key"]; ok {
-		t.Fatal("expected future_key to be dropped, but it was kept")
+	value, ok := result["future_key"]
+	if !ok || value {
+		t.Fatalf("expected future_key=false to round-trip, got %v", result)
 	}
 }
 
@@ -273,14 +301,16 @@ func TestFilterPermissionKeys_FeaturesKey(t *testing.T) {
 	}
 }
 
-func TestExpandPermissions_InvalidKey(t *testing.T) {
+// A key added by a future Open WebUI release must reach the server. Hard-failing
+// on it made the provider unusable against a newer backend.
+func TestExpandPermissions_UnknownKeyReachesTheServer(t *testing.T) {
 	ctx := context.Background()
-	badMap, mapDiags := types.MapValueFrom(ctx, types.BoolType, map[string]bool{"bad_key": true})
+	futureMap, mapDiags := types.MapValueFrom(ctx, types.BoolType, map[string]bool{"future_key": true})
 	if mapDiags.HasError() {
 		t.Fatalf("setup: %s", mapDiags)
 	}
 	model := groupPermissionsModel{
-		Workspace:    badMap,
+		Workspace:    futureMap,
 		Sharing:      types.MapNull(types.BoolType),
 		Chat:         types.MapNull(types.BoolType),
 		Features:     types.MapNull(types.BoolType),
@@ -288,9 +318,19 @@ func TestExpandPermissions_InvalidKey(t *testing.T) {
 		Settings:     types.MapNull(types.BoolType),
 	}
 	var diags diag.Diagnostics
-	expandPermissions(ctx, model, &diags)
-	if !diags.HasError() {
-		t.Fatal("expected error diagnostic for unsupported key")
+	result := expandPermissions(ctx, model, &diags)
+	if diags.HasError() {
+		t.Fatalf("an unknown key must not be an error: %s", diags)
+	}
+	if diags.WarningsCount() != 1 {
+		t.Fatalf("expected one warning for the unknown key, got %d", diags.WarningsCount())
+	}
+	workspace, ok := result["workspace"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected a workspace map, got %T", result["workspace"])
+	}
+	if workspace["future_key"] != true {
+		t.Fatalf("expected future_key=true to be sent, got %v", workspace)
 	}
 }
 
@@ -499,6 +539,126 @@ func TestFilterPermissionKeys_SettingsKey(t *testing.T) {
 	}
 	if result["interface"] != true {
 		t.Fatalf("expected interface=true, got %v", result["interface"])
+	}
+}
+
+// The permission tree exactly as DEFAULT_USER_PERMISSIONS declares it in
+// backend/open_webui/config.py at Open WebUI v0.11.0, lines 1919 to 1999. This
+// test is the record that the provider's lists are complete. When Open WebUI
+// changes the tree, update this literal first and let the failure show what
+// moved.
+var backendPermissionKeys = map[string][]string{
+	"workspace": {
+		"models", "knowledge", "prompts", "tools", "skills",
+		"models_import", "models_export", "prompts_import", "prompts_export",
+		"tools_import", "tools_export", "skills_import", "skills_export",
+	},
+	"sharing": {
+		"models", "public_models", "knowledge", "public_knowledge",
+		"prompts", "public_prompts", "tools", "public_tools",
+		"skills", "public_skills", "notes", "public_notes",
+		"folders", "public_chats", "open_chats", "public_calendars",
+	},
+	"access_grants": {"allow_users", "allow_groups"},
+	"chat": {
+		"controls", "valves", "system_prompt", "params", "file_upload",
+		"web_upload", "delete", "delete_message", "continue_response",
+		"regenerate_response", "rate_response", "edit", "share", "export",
+		"import", "stt", "tts", "call", "multiple_models", "temporary",
+		"temporary_enforced",
+	},
+	"features": {
+		"api_keys", "notes", "folders", "channels", "direct_tool_servers",
+		"web_search", "image_generation", "code_interpreter", "memories",
+		"automations", "calendar", "webhooks",
+	},
+	"settings": {"interface"},
+}
+
+func TestPermissionKeysMatchTheBackend(t *testing.T) {
+	for category, expected := range backendPermissionKeys {
+		t.Run(category, func(t *testing.T) {
+			got := append([]string(nil), allowedKeysSlice(category)...)
+			want := append([]string(nil), expected...)
+			sort.Strings(got)
+			sort.Strings(want)
+			if !slices.Equal(got, want) {
+				t.Fatalf("permission keys for %s do not match the backend:\n got: %v\nwant: %v", category, got, want)
+			}
+		})
+	}
+
+	if len(groupPermissionsAllowedSets) != len(backendPermissionKeys) {
+		t.Fatalf("expected %d permission categories, got %d", len(backendPermissionKeys), len(groupPermissionsAllowedSets))
+	}
+}
+
+// The seven keys v0.11.0 added that the provider refused to send. The wire name
+// of the chat flag is `import`, not `import_`.
+func TestFilterPermissionKeys_V011Additions(t *testing.T) {
+	cases := map[string]string{
+		"workspace":     "skills_import",
+		"sharing":       "folders",
+		"access_grants": "allow_groups",
+		"chat":          "import",
+		"features":      "webhooks",
+	}
+
+	for category, key := range cases {
+		t.Run(category+"."+key, func(t *testing.T) {
+			var diags diag.Diagnostics
+			result := filterPermissionKeys(
+				category,
+				map[string]bool{key: true},
+				path.Root("permissions").AtName(category),
+				&diags,
+			)
+			if diags.HasError() || diags.WarningsCount() != 0 {
+				t.Fatalf("expected %s.%s to be a known key: %s", category, key, diags)
+			}
+			if result[key] != true {
+				t.Fatalf("expected %s.%s=true, got %v", category, key, result)
+			}
+		})
+	}
+}
+
+func TestFilterPermissionKeys_MoreV011Additions(t *testing.T) {
+	var diags diag.Diagnostics
+	result := filterPermissionKeys(
+		"workspace",
+		map[string]bool{"skills_export": true},
+		path.Root("permissions").AtName("workspace"),
+		&diags,
+	)
+	if diags.HasError() || diags.WarningsCount() != 0 {
+		t.Fatalf("expected workspace.skills_export to be a known key: %s", diags)
+	}
+	if result["skills_export"] != true {
+		t.Fatalf("expected skills_export=true, got %v", result)
+	}
+
+	diags = nil
+	sharing := filterPermissionKeys(
+		"sharing",
+		map[string]bool{"open_chats": true},
+		path.Root("permissions").AtName("sharing"),
+		&diags,
+	)
+	if diags.HasError() || diags.WarningsCount() != 0 {
+		t.Fatalf("expected sharing.open_chats to be a known key: %s", diags)
+	}
+	if sharing["open_chats"] != true {
+		t.Fatalf("expected open_chats=true, got %v", sharing)
+	}
+}
+
+func TestPermissionCategoryDescriptionNamesEveryKey(t *testing.T) {
+	description := permissionCategoryDescription("features", "Feature access permissions.")
+	for _, key := range groupPermissionsFeaturesKeys {
+		if !strings.Contains(description, "`"+key+"`") {
+			t.Fatalf("expected the features description to name %q: %s", key, description)
+		}
 	}
 }
 

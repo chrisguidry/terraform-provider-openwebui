@@ -59,7 +59,7 @@ func TestAccPromptDataSource(t *testing.T) {
 	})
 }
 
-func TestAccPromptResource_WithNewFields(t *testing.T) {
+func TestAccPromptResource_Tags(t *testing.T) {
 	suffix := acctest.RandStringFromCharSet(6, acctest.CharSetAlphaNum)
 	command := "tfaccnf" + suffix
 
@@ -67,45 +67,74 @@ func TestAccPromptResource_WithNewFields(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
-			// Step 1: create with is_active=true and multiple tags.
-			// Note: is_active=false is not honoured by the v0.9.x Create/Update
-			// endpoints — the API always returns true. We test the true path here
-			// and rely on schema-level tests for false coverage.
 			{
 				Config: fmt.Sprintf(`%s
 resource "openwebui_prompt" "test" {
-  command   = %q
-  name      = "New Fields Test"
-  content   = "Test content."
-  is_active = true
-  tags      = ["test", "acc"]
+  command = %q
+  name    = "New Fields Test"
+  content = "Test content."
+  tags    = ["test", "acc"]
 }
 `, testAccProviderConfig(), command),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("openwebui_prompt.test", "is_active", "true"),
 					resource.TestCheckResourceAttr("openwebui_prompt.test", "tags.#", "2"),
 					resource.TestCheckResourceAttr("openwebui_prompt.test", "tags.0", "test"),
 				),
 			},
-			// Step 2: update tags only; is_active stays true.
 			{
 				Config: fmt.Sprintf(`%s
 resource "openwebui_prompt" "test" {
-  command   = %q
-  name      = "New Fields Test"
-  content   = "Test content."
-  is_active = true
-  tags      = ["updated"]
+  command = %q
+  name    = "New Fields Test"
+  content = "Test content."
+  tags    = ["updated"]
 }
 `, testAccProviderConfig(), command),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("openwebui_prompt.test", "is_active", "true"),
 					resource.TestCheckResourceAttr("openwebui_prompt.test", "tags.#", "1"),
 					resource.TestCheckResourceAttr("openwebui_prompt.test", "tags.0", "updated"),
 				),
 			},
 		},
 	})
+}
+
+func TestAccPromptResource_PublicSharing(t *testing.T) {
+	suffix := acctest.RandStringFromCharSet(6, acctest.CharSetAlphaNum)
+	command := "tfaccpub" + suffix
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPromptPublicConfig(command, true, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_prompt.test", "public_read", "true"),
+					resource.TestCheckResourceAttr("openwebui_prompt.test", "public_write", "true"),
+				),
+			},
+			{
+				Config: testAccPromptPublicConfig(command, true, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_prompt.test", "public_read", "true"),
+					resource.TestCheckResourceAttr("openwebui_prompt.test", "public_write", "false"),
+				),
+			},
+		},
+	})
+}
+
+func testAccPromptPublicConfig(command string, publicRead, publicWrite bool) string {
+	return fmt.Sprintf(`%s
+resource "openwebui_prompt" "test" {
+  command      = %q
+  name         = "Public Prompt"
+  content      = "Shared with everyone."
+  public_read  = %t
+  public_write = %t
+}
+`, testAccProviderConfig(), command, publicRead, publicWrite)
 }
 
 func testAccPromptResourceConfig(command, name, content string) string {

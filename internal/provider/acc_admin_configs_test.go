@@ -64,6 +64,50 @@ resource "openwebui_models_config" "test" {
 	})
 }
 
+// TestAccModelsConfigResource_DefaultMetadataSurvives sets the two dict fields,
+// then applies a config that names neither. Open WebUI writes every field of the
+// form it receives, so a request that omits them nulls them out.
+func TestAccModelsConfigResource_DefaultMetadataSurvives(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig() + `
+resource "openwebui_models_config" "metadata" {
+  model_order_list            = []
+  default_model_metadata_json = jsonencode({ owner = "platform" })
+  default_model_params_json   = jsonencode({ temperature = 0.5 })
+}`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("openwebui_models_config.metadata", "default_model_metadata_json"),
+					resource.TestCheckResourceAttrSet("openwebui_models_config.metadata", "default_model_params_json"),
+				),
+			},
+			{
+				Config: testAccProviderConfig() + `
+resource "openwebui_models_config" "metadata" {
+  model_order_list            = []
+  default_model_metadata_json = jsonencode({ owner = "platform" })
+  default_model_params_json   = jsonencode({ temperature = 0.5 })
+}`,
+				PlanOnly: true,
+			},
+			{
+				// A separate resource that names neither field must leave both alone.
+				Config: testAccProviderConfig() + `
+resource "openwebui_models_config" "untouched" {
+  model_order_list = []
+}`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_models_config.untouched", "default_model_metadata_json", `{"owner":"platform"}`),
+					resource.TestCheckResourceAttr("openwebui_models_config.untouched", "default_model_params_json", `{"temperature":0.5}`),
+				),
+			},
+		},
+	})
+}
+
 // TestAccSuggestionsConfigResource applies suggestions and verifies idempotency.
 func TestAccSuggestionsConfigResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{

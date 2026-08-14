@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -15,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/docktape/terraform-provider-openwebui/internal/client"
@@ -45,11 +48,15 @@ type modelResourceModel struct {
 	ParamsAdditionalJSON types.String            `tfsdk:"params_additional_json"`
 	ReadGroups           types.List              `tfsdk:"read_groups"`
 	WriteGroups          types.List              `tfsdk:"write_groups"`
+	PublicRead           types.Bool              `tfsdk:"public_read"`
+	PublicWrite          types.Bool              `tfsdk:"public_write"`
 	ProfileImageURL      types.String            `tfsdk:"profile_image_url"`
 	Description          types.String            `tfsdk:"description"`
 	SuggestionPrompts    types.List              `tfsdk:"suggestion_prompts"`
 	Tags                 types.List              `tfsdk:"tags"`
 	ToolIDs              types.List              `tfsdk:"tool_ids"`
+	SkillIDs             types.List              `tfsdk:"skill_ids"`
+	KnowledgeIDs         types.List              `tfsdk:"knowledge_ids"`
 	DefaultFeatureIDs    types.List              `tfsdk:"default_feature_ids"`
 	Capabilities         *modelCapabilitiesModel `tfsdk:"capabilities"`
 }
@@ -58,9 +65,13 @@ type modelResourceModel struct {
 type modelCapabilitiesModel struct {
 	Vision          types.Bool `tfsdk:"vision"`
 	FileUpload      types.Bool `tfsdk:"file_upload"`
+	FileContext     types.Bool `tfsdk:"file_context"`
 	WebSearch       types.Bool `tfsdk:"web_search"`
 	ImageGeneration types.Bool `tfsdk:"image_generation"`
 	CodeInterpreter types.Bool `tfsdk:"code_interpreter"`
+	Terminal        types.Bool `tfsdk:"terminal"`
+	Memory          types.Bool `tfsdk:"memory"`
+	BuiltinTools    types.Bool `tfsdk:"builtin_tools"`
 	Citations       types.Bool `tfsdk:"citations"`
 	StatusUpdates   types.Bool `tfsdk:"status_updates"`
 	Usage           types.Bool `tfsdk:"usage"`
@@ -108,6 +119,8 @@ type modelMetaState struct {
 	SuggestionPrompts types.List
 	Tags              types.List
 	ToolIDs           types.List
+	SkillIDs          types.List
+	KnowledgeIDs      types.List
 	DefaultFeatureIDs types.List
 	Capabilities      *modelCapabilitiesModel
 	Hidden            types.Bool
@@ -173,7 +186,7 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"meta_additional_json": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				Description:   "Additional metadata JSON merged into the model's `meta` object. e.g. `jsonencode({ info = \"custom\" })`.",
+				Description:   "Additional metadata JSON merged into the model's `meta` object. e.g. `jsonencode({ info = \"custom\" })`. Two keys never appear here: `knowledge`, which `knowledge_ids` manages, and `chat_variables_schema`, which Open WebUI derives from the system prompt on every read.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"params_additional_json": schema.StringAttribute{
@@ -196,11 +209,24 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Description:   "List of group names or IDs granted write access.",
 				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
+			"public_read": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				Description:   "Whether every signed-in user can read the model. This is what the web UI calls public sharing.",
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
+			"public_write": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				Description:   "Whether every signed-in user can edit the model.",
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
 			"profile_image_url": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				Description:   "URL of the model's profile image.",
+				Description:   "URL of the model's profile image. Open WebUI accepts an empty string, `/user.png`, `/favicon.png`, `/static/favicon.png`, `/api/v1/users/{id}/profile/image`, an `http(s)` URL with a host, or a `data:image/{png,jpeg,gif,webp};base64,` URI. It drops anything else without an error.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Validators:    []validator.String{profileImageURLValidator{}},
 			},
 			"description": schema.StringAttribute{
 				Optional:      true,
@@ -227,6 +253,20 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:      true,
 				Computed:      true,
 				Description:   "List of tool IDs to attach to the model by default.",
+				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"skill_ids": schema.ListAttribute{
+				ElementType:   types.StringType,
+				Optional:      true,
+				Computed:      true,
+				Description:   "List of skill IDs to attach to the model by default.",
+				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"knowledge_ids": schema.ListAttribute{
+				ElementType:   types.StringType,
+				Optional:      true,
+				Computed:      true,
+				Description:   "List of knowledge base IDs attached to the model. Open WebUI stores a copy of each knowledge base under `meta.knowledge`; the provider resolves the IDs on write and reports only the IDs on read. Knowledge entries attached in the web UI that name a single file or note are not represented here, and setting this attribute replaces them.",
 				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"default_feature_ids": schema.ListAttribute{
@@ -257,6 +297,12 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						Description:   "Whether file uploads are allowed in chat.",
 						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 					},
+					"file_context": schema.BoolAttribute{
+						Optional:      true,
+						Computed:      true,
+						Description:   "Whether uploaded files go into the prompt as context. When `false`, the model reaches them through the file search tool instead. Defaults to `true`.",
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+					},
 					"web_search": schema.BoolAttribute{
 						Optional:      true,
 						Computed:      true,
@@ -273,6 +319,24 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						Optional:      true,
 						Computed:      true,
 						Description:   "Whether code interpreter is available.",
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+					},
+					"terminal": schema.BoolAttribute{
+						Optional:      true,
+						Computed:      true,
+						Description:   "Whether the model can run terminal commands. Defaults to `true`.",
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+					},
+					"memory": schema.BoolAttribute{
+						Optional:      true,
+						Computed:      true,
+						Description:   "Whether the model reads and writes user memories. Defaults to `true`.",
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+					},
+					"builtin_tools": schema.BoolAttribute{
+						Optional:      true,
+						Computed:      true,
+						Description:   "Whether Open WebUI's built-in tools are offered to the model. Defaults to `true`.",
 						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 					},
 					"citations": schema.BoolAttribute{
@@ -391,6 +455,8 @@ func (r *modelResource) Create(ctx context.Context, req resource.CreateRequest, 
 		metaMap = map[string]any{}
 	}
 
+	metaMap = applyKnowledgeToMeta(ctx, r.client, plan.KnowledgeIDs, metaMap, &resp.Diagnostics)
+
 	form := client.ModelForm{
 		ID:     plan.ModelID.ValueString(),
 		Name:   plan.Name.ValueString(),
@@ -402,7 +468,7 @@ func (r *modelResource) Create(ctx context.Context, req resource.CreateRequest, 
 	writeNames := expandStringList(ctx, plan.WriteGroups, path.Root("write_groups"), &resp.Diagnostics)
 	readIDs := resolveGroupNamesToIDs(ctx, r.client, readNames, path.Root("read_groups"), &resp.Diagnostics)
 	writeIDs := resolveGroupNamesToIDs(ctx, r.client, writeNames, path.Root("write_groups"), &resp.Diagnostics)
-	form.AccessControl = buildAccessControl(readIDs, writeIDs)
+	form.AccessControl = withPublicAccess(buildAccessControl(readIDs, writeIDs), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
 
 	if !plan.BaseModelID.IsNull() && !plan.BaseModelID.IsUnknown() && plan.BaseModelID.ValueString() != "" {
 		base := plan.BaseModelID.ValueString()
@@ -501,6 +567,8 @@ func (r *modelResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		metaMap = map[string]any{}
 	}
 
+	metaMap = applyKnowledgeToMeta(ctx, r.client, plan.KnowledgeIDs, metaMap, &resp.Diagnostics)
+
 	form := client.ModelForm{
 		ID:     plan.ModelID.ValueString(),
 		Name:   plan.Name.ValueString(),
@@ -512,7 +580,7 @@ func (r *modelResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	writeNames := expandStringList(ctx, plan.WriteGroups, path.Root("write_groups"), &resp.Diagnostics)
 	readIDs := resolveGroupNamesToIDs(ctx, r.client, readNames, path.Root("read_groups"), &resp.Diagnostics)
 	writeIDs := resolveGroupNamesToIDs(ctx, r.client, writeNames, path.Root("write_groups"), &resp.Diagnostics)
-	form.AccessControl = buildAccessControl(readIDs, writeIDs)
+	form.AccessControl = withPublicAccess(buildAccessControl(readIDs, writeIDs), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
 
 	if !plan.BaseModelID.IsNull() && !plan.BaseModelID.IsUnknown() && plan.BaseModelID.ValueString() != "" {
 		base := plan.BaseModelID.ValueString()
@@ -613,11 +681,15 @@ func modelResponseToModel(ctx context.Context, apiClient *client.Client, resp *c
 		MetaAdditionalJSON:   metaAdditional,
 		ReadGroups:           readList,
 		WriteGroups:          writeList,
+		PublicRead:           types.BoolValue(publicAccessFromControl(resp.AccessControl, "read")),
+		PublicWrite:          types.BoolValue(publicAccessFromControl(resp.AccessControl, "write")),
 		ProfileImageURL:      metaState.ProfileImageURL,
 		Description:          metaState.Description,
 		SuggestionPrompts:    metaState.SuggestionPrompts,
 		Tags:                 metaState.Tags,
 		ToolIDs:              metaState.ToolIDs,
+		SkillIDs:             metaState.SkillIDs,
+		KnowledgeIDs:         metaState.KnowledgeIDs,
 		DefaultFeatureIDs:    metaState.DefaultFeatureIDs,
 		Capabilities:         metaState.Capabilities,
 		Hidden:               metaState.Hidden,
@@ -630,6 +702,130 @@ func modelResponseToModel(ctx context.Context, apiClient *client.Client, resp *c
 	}
 
 	return state, diags
+}
+
+// applyKnowledgeToMeta resolves knowledge base IDs into the entries Open WebUI
+// keeps under meta.knowledge. Each entry needs a type and an id, because
+// retrieval looks the knowledge base up by id and drops any entry missing
+// either one. The name and description travel with the entry so the web UI and
+// the citations Open WebUI attaches to an answer can label the source.
+func applyKnowledgeToMeta(ctx context.Context, apiClient *client.Client, ids types.List, meta map[string]any, diags *diag.Diagnostics) map[string]any {
+	if ids.IsNull() || ids.IsUnknown() {
+		return meta
+	}
+
+	knowledgeIDs := expandStringList(ctx, ids, path.Root("knowledge_ids"), diags)
+	items := make([]any, 0, len(knowledgeIDs))
+	for _, id := range knowledgeIDs {
+		base, err := apiClient.GetKnowledge(ctx, id)
+		if err != nil {
+			diags.AddAttributeError(
+				path.Root("knowledge_ids"),
+				"Unknown knowledge base",
+				fmt.Sprintf("Failed to read Open WebUI knowledge base %q: %v", id, err),
+			)
+			continue
+		}
+
+		items = append(items, map[string]any{
+			"type":        knowledgeCollectionType,
+			"id":          base.ID,
+			"name":        base.Name,
+			"description": base.Description,
+		})
+	}
+
+	if meta == nil {
+		meta = map[string]any{}
+	}
+	meta["knowledge"] = items
+
+	return meta
+}
+
+// knowledgeCollectionType is the entry type Open WebUI reads as "a whole
+// knowledge base". The other entry types name a single file or note.
+const knowledgeCollectionType = "collection"
+
+// knowledgeIDsFromMeta reads the knowledge base IDs out of a stored
+// meta.knowledge list. Entries naming a single file or note carry no knowledge
+// base ID, so they are not represented.
+func knowledgeIDsFromMeta(value any) ([]string, bool) {
+	entries, ok := value.([]any)
+	if !ok {
+		return nil, false
+	}
+
+	ids := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		item, ok := entry.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		if entryType, _ := toStringValue(item["type"]); entryType != knowledgeCollectionType {
+			continue
+		}
+		if id, ok := toStringValue(item["id"]); ok && id != "" {
+			ids = append(ids, id)
+		}
+	}
+
+	return ids, true
+}
+
+// profileImageURLStaticPaths are the only relative paths Open WebUI accepts for
+// a profile image. It matches them exactly, with no prefix or wildcard.
+var profileImageURLStaticPaths = map[string]bool{
+	"/user.png":           true,
+	"/favicon.png":        true,
+	"/static/favicon.png": true,
+}
+
+var profileImageUserRoutePattern = regexp.MustCompile(`^/api/v1/users/[^/?#]+/profile/image$`)
+
+var profileImageDataURIPattern = regexp.MustCompile(`(?i)^data:image/(gif|jpeg|png|webp);base64,`)
+
+// profileImageURLValidator rejects the values Open WebUI's own validator
+// rejects. The server catches its own error and stores null instead, so an
+// unchecked value applies without complaint and then reads back empty, which
+// Terraform reports as an inconsistent result rather than as bad input.
+type profileImageURLValidator struct{}
+
+func (profileImageURLValidator) Description(_ context.Context) string {
+	return "Accepts an empty string, a known Open WebUI asset path, an http(s) URL with a host, or a data:image URI."
+}
+
+func (v profileImageURLValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (profileImageURLValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	value := req.ConfigValue.ValueString()
+	if value == "" || profileImageURLStaticPaths[value] || profileImageUserRoutePattern.MatchString(value) {
+		return
+	}
+	if profileImageDataURIPattern.MatchString(value) {
+		return
+	}
+
+	parsed, err := url.Parse(value)
+	if err == nil && (parsed.Scheme == "http" || parsed.Scheme == "https") && parsed.Hostname() != "" {
+		return
+	}
+
+	resp.Diagnostics.AddAttributeError(
+		req.Path,
+		"Invalid profile image URL",
+		fmt.Sprintf(
+			"Open WebUI discards %q and stores no image. Use an empty string, one of /user.png, /favicon.png or /static/favicon.png, "+
+				"a /api/v1/users/{id}/profile/image path, an http(s) URL with a host, or a data:image/{png,jpeg,gif,webp};base64, URI.",
+			value,
+		),
+	)
 }
 
 func expandModelParams(ctx context.Context, params *modelParamsModel, diags *diag.Diagnostics) map[string]any {
@@ -810,6 +1006,15 @@ func expandModelMeta(ctx context.Context, plan *modelResourceModel, diags *diag.
 			meta["toolIds"] = []any{}
 		}
 	}
+	if !plan.SkillIDs.IsNull() && !plan.SkillIDs.IsUnknown() {
+		skills := expandStringList(ctx, plan.SkillIDs, path.Root("skill_ids"), diags)
+		ensureMap()
+		if len(skills) > 0 {
+			meta["skillIds"] = skills
+		} else {
+			meta["skillIds"] = []any{}
+		}
+	}
 	if !plan.DefaultFeatureIDs.IsNull() && !plan.DefaultFeatureIDs.IsUnknown() {
 		features := expandStringList(ctx, plan.DefaultFeatureIDs, path.Root("default_feature_ids"), diags)
 		ensureMap()
@@ -840,6 +1045,9 @@ func expandModelCapabilities(caps *modelCapabilitiesModel) map[string]any {
 	if !caps.FileUpload.IsNull() && !caps.FileUpload.IsUnknown() {
 		result["file_upload"] = caps.FileUpload.ValueBool()
 	}
+	if !caps.FileContext.IsNull() && !caps.FileContext.IsUnknown() {
+		result["file_context"] = caps.FileContext.ValueBool()
+	}
 	if !caps.WebSearch.IsNull() && !caps.WebSearch.IsUnknown() {
 		result["web_search"] = caps.WebSearch.ValueBool()
 	}
@@ -848,6 +1056,15 @@ func expandModelCapabilities(caps *modelCapabilitiesModel) map[string]any {
 	}
 	if !caps.CodeInterpreter.IsNull() && !caps.CodeInterpreter.IsUnknown() {
 		result["code_interpreter"] = caps.CodeInterpreter.ValueBool()
+	}
+	if !caps.Terminal.IsNull() && !caps.Terminal.IsUnknown() {
+		result["terminal"] = caps.Terminal.ValueBool()
+	}
+	if !caps.Memory.IsNull() && !caps.Memory.IsUnknown() {
+		result["memory"] = caps.Memory.ValueBool()
+	}
+	if !caps.BuiltinTools.IsNull() && !caps.BuiltinTools.IsUnknown() {
+		result["builtin_tools"] = caps.BuiltinTools.ValueBool()
 	}
 	if !caps.Citations.IsNull() && !caps.Citations.IsUnknown() {
 		result["citations"] = caps.Citations.ValueBool()
@@ -1064,16 +1281,7 @@ func flattenModelParams(ctx context.Context, data map[string]any) (*modelParamsM
 func flattenModelMeta(ctx context.Context, data map[string]any) (modelMetaState, types.String, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	emptyCapabilities := &modelCapabilitiesModel{
-		Vision:          types.BoolNull(),
-		FileUpload:      types.BoolNull(),
-		WebSearch:       types.BoolNull(),
-		ImageGeneration: types.BoolNull(),
-		CodeInterpreter: types.BoolNull(),
-		Citations:       types.BoolNull(),
-		StatusUpdates:   types.BoolNull(),
-		Usage:           types.BoolNull(),
-	}
+	emptyCapabilities := newEmptyModelCapabilities()
 
 	state := modelMetaState{
 		ProfileImageURL:   types.StringNull(),
@@ -1081,6 +1289,8 @@ func flattenModelMeta(ctx context.Context, data map[string]any) (modelMetaState,
 		SuggestionPrompts: types.ListNull(types.StringType),
 		Tags:              types.ListNull(types.StringType),
 		ToolIDs:           types.ListNull(types.StringType),
+		SkillIDs:          types.ListNull(types.StringType),
+		KnowledgeIDs:      types.ListNull(types.StringType),
 		DefaultFeatureIDs: types.ListNull(types.StringType),
 		Capabilities:      emptyCapabilities,
 		Hidden:            types.BoolNull(),
@@ -1097,6 +1307,12 @@ func flattenModelMeta(ctx context.Context, data map[string]any) (modelMetaState,
 	delete(additional, "profile_image_url")
 	delete(additional, "description")
 	delete(additional, "hidden")
+	// ModelMeta declares knowledge, so every read carries the key even when
+	// nothing set it.
+	delete(additional, "knowledge")
+	// Open WebUI derives chat_variables_schema from params.system on read. It is
+	// never part of a request, so it belongs in no part of the configuration.
+	delete(additional, "chat_variables_schema")
 
 	if value, ok := toStringValue(data["profile_image_url"]); ok {
 		state.ProfileImageURL = types.StringValue(value)
@@ -1161,6 +1377,31 @@ func flattenModelMeta(ctx context.Context, data map[string]any) (modelMetaState,
 			diags.AddError("Unexpected meta value", fmt.Sprintf("Expected meta.toolIds to be a list of strings, received %T", raw))
 		}
 	}
+	if raw, ok := data["skillIds"]; ok && raw != nil {
+		skills, convOK := toStringSlice(raw)
+		if convOK {
+			list, listDiags := types.ListValueFrom(ctx, types.StringType, skills)
+			diags.Append(listDiags...)
+			if !listDiags.HasError() {
+				state.SkillIDs = list
+			}
+			delete(additional, "skillIds")
+		} else {
+			diags.AddError("Unexpected meta value", fmt.Sprintf("Expected meta.skillIds to be a list of strings, received %T", raw))
+		}
+	}
+	if raw, ok := data["knowledge"]; ok && raw != nil {
+		knowledgeIDs, convOK := knowledgeIDsFromMeta(raw)
+		if convOK {
+			list, listDiags := types.ListValueFrom(ctx, types.StringType, knowledgeIDs)
+			diags.Append(listDiags...)
+			if !listDiags.HasError() {
+				state.KnowledgeIDs = list
+			}
+		} else {
+			diags.AddError("Unexpected meta value", fmt.Sprintf("Expected meta.knowledge to be a list of objects, received %T", raw))
+		}
+	}
 	if raw, ok := data["defaultFeatureIds"]; ok && raw != nil {
 		features, convOK := toStringSlice(raw)
 		if convOK {
@@ -1194,9 +1435,13 @@ func flattenModelMeta(ctx context.Context, data map[string]any) (modelMetaState,
 var modelCapabilitiesAttrTypes = map[string]attr.Type{
 	"vision":           types.BoolType,
 	"file_upload":      types.BoolType,
+	"file_context":     types.BoolType,
 	"web_search":       types.BoolType,
 	"image_generation": types.BoolType,
 	"code_interpreter": types.BoolType,
+	"terminal":         types.BoolType,
+	"memory":           types.BoolType,
+	"builtin_tools":    types.BoolType,
 	"citations":        types.BoolType,
 	"status_updates":   types.BoolType,
 	"usage":            types.BoolType,
@@ -1238,17 +1483,27 @@ func (capabilitiesEmptyDefaultModifier) PlanModifyObject(ctx context.Context, re
 	}
 }
 
-func flattenModelCapabilities(data map[string]any) *modelCapabilitiesModel {
-	caps := &modelCapabilitiesModel{
+// newEmptyModelCapabilities builds the capability block Terraform sees when
+// Open WebUI reports no capabilities at all.
+func newEmptyModelCapabilities() *modelCapabilitiesModel {
+	return &modelCapabilitiesModel{
 		Vision:          types.BoolNull(),
 		FileUpload:      types.BoolNull(),
+		FileContext:     types.BoolNull(),
 		WebSearch:       types.BoolNull(),
 		ImageGeneration: types.BoolNull(),
 		CodeInterpreter: types.BoolNull(),
+		Terminal:        types.BoolNull(),
+		Memory:          types.BoolNull(),
+		BuiltinTools:    types.BoolNull(),
 		Citations:       types.BoolNull(),
 		StatusUpdates:   types.BoolNull(),
 		Usage:           types.BoolNull(),
 	}
+}
+
+func flattenModelCapabilities(data map[string]any) *modelCapabilitiesModel {
+	caps := newEmptyModelCapabilities()
 
 	if data == nil {
 		return caps
@@ -1260,6 +1515,9 @@ func flattenModelCapabilities(data map[string]any) *modelCapabilitiesModel {
 	if value, ok := toBoolValue(data["file_upload"]); ok {
 		caps.FileUpload = types.BoolValue(value)
 	}
+	if value, ok := toBoolValue(data["file_context"]); ok {
+		caps.FileContext = types.BoolValue(value)
+	}
 	if value, ok := toBoolValue(data["web_search"]); ok {
 		caps.WebSearch = types.BoolValue(value)
 	}
@@ -1268,6 +1526,15 @@ func flattenModelCapabilities(data map[string]any) *modelCapabilitiesModel {
 	}
 	if value, ok := toBoolValue(data["code_interpreter"]); ok {
 		caps.CodeInterpreter = types.BoolValue(value)
+	}
+	if value, ok := toBoolValue(data["terminal"]); ok {
+		caps.Terminal = types.BoolValue(value)
+	}
+	if value, ok := toBoolValue(data["memory"]); ok {
+		caps.Memory = types.BoolValue(value)
+	}
+	if value, ok := toBoolValue(data["builtin_tools"]); ok {
+		caps.BuiltinTools = types.BoolValue(value)
 	}
 	if value, ok := toBoolValue(data["citations"]); ok {
 		caps.Citations = types.BoolValue(value)

@@ -4,14 +4,14 @@ page_title: "openwebui_knowledge Resource - openwebui"
 subcategory: ""
 description: |-
   Manages a knowledge base entry in Open WebUI.
-  Omit both read_groups and write_groups to leave the entry publicly accessible.
+  With no groups and neither public_read nor public_write, the entry is visible to its owner and to admins only. Set public_read = true to share it with every signed-in user.
 ---
 
 # openwebui_knowledge (Resource)
 
 Manages a knowledge base entry in Open WebUI.
 
-Omit both `read_groups` and `write_groups` to leave the entry publicly accessible.
+With no groups and neither `public_read` nor `public_write`, the entry is visible to its owner and to admins only. Set `public_read = true` to share it with every signed-in user.
 
 ## Example Usage
 
@@ -35,10 +35,10 @@ resource "openwebui_knowledge" "example" {
 
 ### Optional
 
-- `data_json` (String) Optional JSON object sent as additional metadata during create and update. e.g. `jsonencode({ category = "support" })`.
-- `meta_json` (String) JSON metadata stored on the knowledge entry. Open WebUI may enrich this after create. e.g. `jsonencode({ source = "internal" })`.
-- `read_groups` (List of String) List of group names or IDs granted read access. Leave unset or empty for public access.
-- `write_groups` (List of String) List of group names or IDs granted write access. Groups here automatically receive read access too. Leave unset or empty for public access.
+- `public_read` (Boolean) When `true`, every signed-in user can read the knowledge base. This is what the Open WebUI interface calls public sharing.
+- `public_write` (Boolean) When `true`, every signed-in user can edit the knowledge base.
+- `read_groups` (List of String) List of group names or IDs granted read access.
+- `write_groups` (List of String) List of group names or IDs granted write access. Groups here automatically receive read access too.
 
 ### Read-Only
 

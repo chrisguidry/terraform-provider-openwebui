@@ -35,12 +35,16 @@ data "openwebui_model" "llama" {
 - `hidden` (Boolean) Whether the model is hidden from the model selector list in the UI.
 - `id` (String) Composite identifier mirroring `model_id`.
 - `is_active` (Boolean) Whether the model is visible and available to users.
-- `meta_additional_json` (String) Additional metadata JSON as returned by Open WebUI.
+- `knowledge_ids` (List of String) List of knowledge base IDs attached to the model. Knowledge entries naming a single file or note are not represented.
+- `meta_additional_json` (String) Additional metadata JSON as returned by Open WebUI. It holds neither `knowledge`, which `knowledge_ids` reports, nor the server-derived `chat_variables_schema`.
 - `name` (String) Display name of the model.
 - `params` (Attributes) Model parameter values returned by Open WebUI. (see [below for nested schema](#nestedatt--params))
 - `params_additional_json` (String) Additional parameters JSON as returned by Open WebUI.
 - `profile_image_url` (String) URL of the model's profile image.
+- `public_read` (Boolean) Whether every signed-in user can read the model.
+- `public_write` (Boolean) Whether every signed-in user can edit the model.
 - `read_groups` (List of String) Read-access group names.
+- `skill_ids` (List of String) List of skill IDs attached to the model by default.
 - `suggestion_prompts` (List of String) List of suggested starter prompts shown when the model is selected.
 - `tags` (List of String) List of tags for categorising the model.
 - `tool_ids` (List of String) List of tool IDs attached to the model by default.
@@ -53,11 +57,15 @@ data "openwebui_model" "llama" {
 
 Read-Only:
 
+- `builtin_tools` (Boolean) Whether Open WebUI's built-in tools are offered to the model.
 - `citations` (Boolean) Whether the model returns citations.
 - `code_interpreter` (Boolean) Whether code interpreter is available.
+- `file_context` (Boolean) Whether uploaded files go into the prompt as context.
 - `file_upload` (Boolean) Whether file uploads are allowed in chat.
 - `image_generation` (Boolean) Whether image generation is available.
+- `memory` (Boolean) Whether the model reads and writes user memories.
 - `status_updates` (Boolean) Whether the model emits status update messages.
+- `terminal` (Boolean) Whether the model can run terminal commands.
 - `usage` (Boolean) Whether token usage statistics are returned.
 - `vision` (Boolean) Whether the model accepts image inputs.
 - `web_search` (Boolean) Whether web search is available.

@@ -138,6 +138,31 @@ func buildAccessControl(readIDs, writeIDs []string) map[string]any {
 	return control
 }
 
+// withPublicAccess records the public-sharing flags on an access_control map.
+// The client turns each true flag into a wildcard user grant, which is what
+// Open WebUI reads as "every signed-in user". A resource that shares with
+// nobody keeps a nil map, which the client sends as owner-only.
+func withPublicAccess(control map[string]any, publicRead, publicWrite bool) map[string]any {
+	if control == nil {
+		if !publicRead && !publicWrite {
+			return nil
+		}
+		control = map[string]any{}
+	}
+
+	control["public_read"] = publicRead
+	control["public_write"] = publicWrite
+
+	return control
+}
+
+// publicAccessFromControl reports whether an access_control map carries the
+// wildcard grant for the given permission.
+func publicAccessFromControl(access map[string]any, permission string) bool {
+	public, _ := access["public_"+permission].(bool)
+	return public
+}
+
 func extractGroupIDsFromAccessControl(access map[string]any, section string) []string {
 	if access == nil {
 		return nil

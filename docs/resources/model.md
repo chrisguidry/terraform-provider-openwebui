@@ -52,10 +52,14 @@ resource "openwebui_model" "example" {
 - `description` (String) Short description shown alongside the model name.
 - `hidden` (Boolean) When `true`, the model is hidden from the model selector list in the UI but remains usable via the API. Distinct from `is_active` — a hidden model is still active.
 - `is_active` (Boolean) Whether the model is visible and available to users. Defaults to `false`.
-- `meta_additional_json` (String) Additional metadata JSON merged into the model's `meta` object. e.g. `jsonencode({ info = "custom" })`.
+- `knowledge_ids` (List of String) List of knowledge base IDs attached to the model. Open WebUI stores a copy of each knowledge base under `meta.knowledge`; the provider resolves the IDs on write and reports only the IDs on read. Knowledge entries attached in the web UI that name a single file or note are not represented here, and setting this attribute replaces them.
+- `meta_additional_json` (String) Additional metadata JSON merged into the model's `meta` object. e.g. `jsonencode({ info = "custom" })`. Two keys never appear here: `knowledge`, which `knowledge_ids` manages, and `chat_variables_schema`, which Open WebUI derives from the system prompt on every read.
 - `params_additional_json` (String) Additional model parameters JSON merged into `params`, for fields not covered by the `params` block. e.g. `jsonencode({ top_p = 0.9 })`.
-- `profile_image_url` (String) URL of the model's profile image.
+- `profile_image_url` (String) URL of the model's profile image. Open WebUI accepts an empty string, `/user.png`, `/favicon.png`, `/static/favicon.png`, `/api/v1/users/{id}/profile/image`, an `http(s)` URL with a host, or a `data:image/{png,jpeg,gif,webp};base64,` URI. It drops anything else without an error.
+- `public_read` (Boolean) Whether every signed-in user can read the model. This is what the web UI calls public sharing.
+- `public_write` (Boolean) Whether every signed-in user can edit the model.
 - `read_groups` (List of String) List of group names or IDs granted read access. Leave unset or empty for public access.
+- `skill_ids` (List of String) List of skill IDs to attach to the model by default.
 - `suggestion_prompts` (List of String) List of suggested starter prompts shown when the model is selected.
 - `tags` (List of String) List of tags for categorising the model.
 - `tool_ids` (List of String) List of tool IDs to attach to the model by default.
@@ -111,11 +115,15 @@ Optional:
 
 Optional:
 
+- `builtin_tools` (Boolean) Whether Open WebUI's built-in tools are offered to the model. Defaults to `true`.
 - `citations` (Boolean) Whether the model returns citations.
 - `code_interpreter` (Boolean) Whether code interpreter is available.
+- `file_context` (Boolean) Whether uploaded files go into the prompt as context. When `false`, the model reaches them through the file search tool instead. Defaults to `true`.
 - `file_upload` (Boolean) Whether file uploads are allowed in chat.
 - `image_generation` (Boolean) Whether image generation is available.
+- `memory` (Boolean) Whether the model reads and writes user memories. Defaults to `true`.
 - `status_updates` (Boolean) Whether the model emits status update messages.
+- `terminal` (Boolean) Whether the model can run terminal commands. Defaults to `true`.
 - `usage` (Boolean) Whether token usage statistics are returned.
 - `vision` (Boolean) Whether the model accepts image inputs.
 - `web_search` (Boolean) Whether web search is available.

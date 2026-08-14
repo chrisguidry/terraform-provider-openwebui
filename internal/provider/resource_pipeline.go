@@ -79,8 +79,8 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"key": schema.StringAttribute{
 				Optional:            true,
 				Sensitive:           true,
-				Description:         "API key for the pipeline server.",
-				MarkdownDescription: "API key for the pipeline server.",
+				Description:         "API key for the pipeline server. Open WebUI reads the key from the OpenAI connection at url_idx, so this value is kept in state and never sent.",
+				MarkdownDescription: "API key for the pipeline server. Open WebUI reads the key from the OpenAI connection at `url_idx`, so this value is kept in state and never sent. Set the key on the `openwebui_openai_connections` entry instead.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"url_idx": schema.Int64Attribute{
@@ -139,14 +139,12 @@ func (r *pipelineResource) Create(ctx context.Context, req resource.CreateReques
 		urlIdx = 0
 	}
 
-	keyValue := plan.Key.ValueString()
-
 	var response map[string]any
 	var err error
 	if sourcePath != "" {
 		response, err = r.client.UploadPipeline(ctx, sourcePath, urlIdx)
 	} else {
-		response, err = r.client.AddPipeline(ctx, urlValue, urlIdx, keyValue)
+		response, err = r.client.AddPipeline(ctx, urlValue, urlIdx)
 	}
 	if err != nil {
 		resp.Diagnostics.AddError("Create pipeline failed", err.Error())

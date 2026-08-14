@@ -156,14 +156,24 @@ func (p *openWebUIProvider) Configure(ctx context.Context, req provider.Configur
 }
 
 // Resources defines provider-supported resources.
+
+// Resource and data-source constructors registered from their own files.
+// Each resource file appends its constructors in an init function, so
+// adding a resource never edits this file.
+var (
+	registeredResources   []func() resource.Resource
+	registeredDataSources []func() datasource.DataSource
+)
+
 func (p *openWebUIProvider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
+	return append([]func() resource.Resource{
 		NewKnowledgeResource,
 		NewModelResource,
 		NewPromptResource,
 		NewGroupResource,
 		NewToolResource,
 		NewToolValvesResource,
+		NewSkillResource,
 		NewPipelineResource,
 		NewPipelineValvesResource,
 		NewFileResource,
@@ -180,17 +190,18 @@ func (p *openWebUIProvider) Resources(_ context.Context) []func() resource.Resou
 		NewFunctionValvesResource,
 		NewOpenAIConnectionsResource,
 		NewOllamaConnectionsResource,
-	}
+	}, registeredResources...)
 }
 
 // DataSources defines provider-supported data sources.
 func (p *openWebUIProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
+	return append([]func() datasource.DataSource{
 		NewModelDataSource,
 		NewKnowledgeDataSource,
 		NewGroupDataSource,
 		NewPromptDataSource,
 		NewToolDataSource,
+		NewSkillDataSource,
 		NewPipelineDataSource,
 		NewFileDataSource,
 		NewFilesDataSource,
@@ -199,5 +210,5 @@ func (p *openWebUIProvider) DataSources(_ context.Context) []func() datasource.D
 		NewToolServerVerifyDataSource,
 		NewOpenAIConnectionVerifyDataSource,
 		NewOllamaConnectionVerifyDataSource,
-	}
+	}, registeredDataSources...)
 }

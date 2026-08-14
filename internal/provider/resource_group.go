@@ -6,8 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -17,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/docktape/terraform-provider-openwebui/internal/client"
@@ -99,64 +96,46 @@ func (r *groupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 				Attributes: map[string]schema.Attribute{
 					"workspace": schema.MapAttribute{
-						Optional:      true,
-						Computed:      true,
-						ElementType:   types.BoolType,
-						Description:   "Workspace-level permissions. Valid keys: `models`, `knowledge`, `prompts`, `tools`.",
-						PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
-						Validators: []validator.Map{
-							mapvalidator.KeysAre(stringvalidator.OneOf(groupPermissionsWorkspaceKeys...)),
-						},
+						Optional:            true,
+						Computed:            true,
+						ElementType:         types.BoolType,
+						MarkdownDescription: permissionCategoryDescription("workspace", "Workspace-level permissions."),
+						PlanModifiers:       []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 					},
 					"sharing": schema.MapAttribute{
-						Optional:      true,
-						Computed:      true,
-						ElementType:   types.BoolType,
-						Description:   "Sharing permissions. Valid keys: `public_models`, `public_knowledge`, `public_prompts`, `public_tools`.",
-						PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
-						Validators: []validator.Map{
-							mapvalidator.KeysAre(stringvalidator.OneOf(groupPermissionsSharingKeys...)),
-						},
+						Optional:            true,
+						Computed:            true,
+						ElementType:         types.BoolType,
+						MarkdownDescription: permissionCategoryDescription("sharing", "Sharing permissions."),
+						PlanModifiers:       []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 					},
 					"chat": schema.MapAttribute{
-						Optional:      true,
-						Computed:      true,
-						ElementType:   types.BoolType,
-						Description:   "Chat-level permissions. Valid keys: `controls`, `valves`, `system_prompt`, `params`, `file_upload`, `delete`, `delete_message`, `continue_response`, `regenerate_response`, `rate_response`, `edit`, `share`, `export`, `stt`, `tts`, `call`, `multiple_models`, `temporary`, `temporary_enforced`.",
-						PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
-						Validators: []validator.Map{
-							mapvalidator.KeysAre(stringvalidator.OneOf(groupPermissionsChatKeys...)),
-						},
+						Optional:            true,
+						Computed:            true,
+						ElementType:         types.BoolType,
+						MarkdownDescription: permissionCategoryDescription("chat", "Chat-level permissions."),
+						PlanModifiers:       []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 					},
 					"features": schema.MapAttribute{
-						Optional:      true,
-						Computed:      true,
-						ElementType:   types.BoolType,
-						Description:   "Feature access permissions. Valid keys: `direct_tool_servers`, `web_search`, `image_generation`, `code_interpreter`, `notes`.",
-						PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
-						Validators: []validator.Map{
-							mapvalidator.KeysAre(stringvalidator.OneOf(groupPermissionsFeaturesKeys...)),
-						},
+						Optional:            true,
+						Computed:            true,
+						ElementType:         types.BoolType,
+						MarkdownDescription: permissionCategoryDescription("features", "Feature access permissions."),
+						PlanModifiers:       []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 					},
 					"access_grants": schema.MapAttribute{
-						ElementType:   types.BoolType,
-						Optional:      true,
-						Computed:      true,
-						Description:   "Access-grant permission flags. Supported key: `allow_users` — whether group members can grant resource access to other users.",
-						PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
-						Validators: []validator.Map{
-							mapvalidator.KeysAre(stringvalidator.OneOf(groupPermissionsAccessGrantsKeys...)),
-						},
+						ElementType:         types.BoolType,
+						Optional:            true,
+						Computed:            true,
+						MarkdownDescription: permissionCategoryDescription("access_grants", "Access-grant permissions, controlling whether group members may share a resource with other users or with other groups."),
+						PlanModifiers:       []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 					},
 					"settings": schema.MapAttribute{
-						ElementType:   types.BoolType,
-						Optional:      true,
-						Computed:      true,
-						Description:   "Settings permission flags. Supported key: `interface` — whether group members can modify their interface settings.",
-						PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
-						Validators: []validator.Map{
-							mapvalidator.KeysAre(stringvalidator.OneOf(groupPermissionsSettingsKeys...)),
-						},
+						ElementType:         types.BoolType,
+						Optional:            true,
+						Computed:            true,
+						MarkdownDescription: permissionCategoryDescription("settings", "Settings permissions, controlling whether group members may change their interface settings."),
+						PlanModifiers:       []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 					},
 				},
 			},
@@ -219,8 +198,6 @@ func (r *groupResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	providedUsers := !plan.Users.IsNull() && !plan.Users.IsUnknown()
 	providedPermissions := permissionsObjectSpecified(ctx, plan.Permissions, &resp.Diagnostics)
-	providedMeta := false
-	providedData := false
 
 	usernames := expandStringList(ctx, plan.Users, path.Root("users"), &resp.Diagnostics)
 	resolvedUserIDs := uniqueStrings(resolveUsernamesToIDs(ctx, r.client, usernames, path.Root("users"), &resp.Diagnostics))
@@ -238,14 +215,12 @@ func (r *groupResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	planPermsModel := objectToPermissionsModel(ctx, plan.Permissions, &resp.Diagnostics)
 	updateForm.Permissions = expandPermissions(ctx, planPermsModel, &resp.Diagnostics)
-	updateForm.Meta = nil
-	updateForm.Data = nil
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if providedPermissions || providedMeta || providedData {
+	if providedPermissions {
 		if _, err := r.client.UpdateGroup(ctx, created.ID, updateForm); err != nil {
 			resp.Diagnostics.AddError("Update group failed", err.Error())
 			return
@@ -327,8 +302,6 @@ func (r *groupResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	desiredIDs := uniqueStrings(resolveUsernamesToIDs(ctx, r.client, usernames, path.Root("users"), &resp.Diagnostics))
 	planPermsModel := objectToPermissionsModel(ctx, plan.Permissions, &resp.Diagnostics)
 	form.Permissions = expandPermissions(ctx, planPermsModel, &resp.Diagnostics)
-	form.Meta = nil
-	form.Data = nil
 
 	if resp.Diagnostics.HasError() {
 		return

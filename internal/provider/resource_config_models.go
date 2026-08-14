@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -25,10 +28,12 @@ type modelsConfigResource struct {
 }
 
 type modelsConfigModel struct {
-	ID                  types.String `tfsdk:"id"`
-	DefaultModels       types.String `tfsdk:"default_models"`
-	DefaultPinnedModels types.String `tfsdk:"default_pinned_models"`
-	ModelOrderList      types.List   `tfsdk:"model_order_list"`
+	ID                       types.String `tfsdk:"id"`
+	DefaultModels            types.String `tfsdk:"default_models"`
+	DefaultPinnedModels      types.String `tfsdk:"default_pinned_models"`
+	ModelOrderList           types.List   `tfsdk:"model_order_list"`
+	DefaultModelMetadataJSON types.String `tfsdk:"default_model_metadata_json"`
+	DefaultModelParamsJSON   types.String `tfsdk:"default_model_params_json"`
 }
 
 // NewModelsConfigResource constructs a new models config resource.
@@ -74,6 +79,20 @@ func (r *modelsConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				MarkdownDescription: "Ordered list of model IDs controlling display order.",
 				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
+			"default_model_metadata_json": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Default model metadata as a JSON object. Open WebUI stores it under models.default_metadata.",
+				MarkdownDescription: "Default model metadata as a JSON object. Open WebUI stores it under `models.default_metadata`.",
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"default_model_params_json": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Default model parameters as a JSON object. Open WebUI stores it under models.default_params.",
+				MarkdownDescription: "Default model parameters as a JSON object. Open WebUI stores it under `models.default_params`.",
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
 		},
 	}
 }
@@ -118,6 +137,12 @@ func (r *modelsConfigResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
+	var recorded modelsConfigModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &recorded)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	config, err := r.client.GetModelsConfig(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Read models config failed", err.Error())
@@ -127,11 +152,23 @@ func (r *modelsConfigResource) Read(ctx context.Context, req resource.ReadReques
 	orderList, listDiags := flattenStringSlice(ctx, config.ModelOrderList)
 	resp.Diagnostics.Append(listDiags...)
 
+	metadataJSON, metadataDiags := jsonRefreshValue(recorded.DefaultModelMetadataJSON, config.DefaultModelMetadata, "default_model_metadata_json")
+	resp.Diagnostics.Append(metadataDiags...)
+
+	paramsJSON, paramsDiags := jsonRefreshValue(recorded.DefaultModelParamsJSON, config.DefaultModelParams, "default_model_params_json")
+	resp.Diagnostics.Append(paramsDiags...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	state := modelsConfigModel{
-		ID:                  types.StringValue("models"),
-		DefaultModels:       stringValueOrNull(config.DefaultModels),
-		DefaultPinnedModels: stringValueOrNull(config.DefaultPinnedModels),
-		ModelOrderList:      orderList,
+		ID:                       types.StringValue("models"),
+		DefaultModels:            stringValueOrNull(config.DefaultModels),
+		DefaultPinnedModels:      stringValueOrNull(config.DefaultPinnedModels),
+		ModelOrderList:           orderList,
+		DefaultModelMetadataJSON: metadataJSON,
+		DefaultModelParamsJSON:   paramsJSON,
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -180,10 +217,35 @@ func applyModelsConfig(ctx context.Context, apiClient *client.Client, plan model
 		orderList = expandStringList(ctx, plan.ModelOrderList, path.Root("model_order_list"), &diags)
 	}
 
+	metadata := decodeOptionalJSON(plan.DefaultModelMetadataJSON, path.Root("default_model_metadata_json"), &diags)
+	params := decodeOptionalJSON(plan.DefaultModelParamsJSON, path.Root("default_model_params_json"), &diags)
+	if diags.HasError() {
+		return modelsConfigModel{}, diags
+	}
+
+	// POST /configs/models writes every field of the form it receives, so a
+	// field the plan leaves unknown has to carry the server's current value.
+	// Sending it as null erases the stored metadata and parameters.
+	if plan.DefaultModelMetadataJSON.IsUnknown() || plan.DefaultModelParamsJSON.IsUnknown() {
+		current, err := apiClient.GetModelsConfig(ctx)
+		if err != nil {
+			diags.AddError("Read models config failed", err.Error())
+			return modelsConfigModel{}, diags
+		}
+		if plan.DefaultModelMetadataJSON.IsUnknown() {
+			metadata = current.DefaultModelMetadata
+		}
+		if plan.DefaultModelParamsJSON.IsUnknown() {
+			params = current.DefaultModelParams
+		}
+	}
+
 	form := client.ModelsConfigForm{
-		DefaultModels:       stringPtr(plan.DefaultModels),
-		DefaultPinnedModels: stringPtr(plan.DefaultPinnedModels),
-		ModelOrderList:      orderList,
+		DefaultModels:        stringPtr(plan.DefaultModels),
+		DefaultPinnedModels:  stringPtr(plan.DefaultPinnedModels),
+		ModelOrderList:       orderList,
+		DefaultModelMetadata: metadata,
+		DefaultModelParams:   params,
 	}
 
 	updated, err := apiClient.SetModelsConfig(ctx, form)
@@ -195,12 +257,63 @@ func applyModelsConfig(ctx context.Context, apiClient *client.Client, plan model
 	order, listDiags := flattenStringSlice(ctx, updated.ModelOrderList)
 	diags.Append(listDiags...)
 
+	metadataJSON, encodeDiags := jsonStateValue(plan.DefaultModelMetadataJSON, updated.DefaultModelMetadata, "default_model_metadata_json")
+	diags.Append(encodeDiags...)
+
+	paramsJSON, encodeDiags := jsonStateValue(plan.DefaultModelParamsJSON, updated.DefaultModelParams, "default_model_params_json")
+	diags.Append(encodeDiags...)
+
+	if diags.HasError() {
+		return modelsConfigModel{}, diags
+	}
+
 	state := modelsConfigModel{
-		ID:                  types.StringValue("models"),
-		DefaultModels:       stringValueOrNull(updated.DefaultModels),
-		DefaultPinnedModels: stringValueOrNull(updated.DefaultPinnedModels),
-		ModelOrderList:      order,
+		ID:                       types.StringValue("models"),
+		DefaultModels:            stringValueOrNull(updated.DefaultModels),
+		DefaultPinnedModels:      stringValueOrNull(updated.DefaultPinnedModels),
+		ModelOrderList:           order,
+		DefaultModelMetadataJSON: metadataJSON,
+		DefaultModelParamsJSON:   paramsJSON,
 	}
 
 	return state, diags
+}
+
+// jsonStateValue keeps the configured JSON text when the plan carries one, so
+// that re-encoding the server's answer cannot reorder keys or change whitespace
+// and make the applied value differ from the planned one.
+func jsonStateValue(planned types.String, serverValue map[string]any, attribute string) (types.String, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	if !planned.IsNull() && !planned.IsUnknown() {
+		return planned, diags
+	}
+
+	encoded, err := encodeOptionalJSON(serverValue)
+	if err != nil {
+		diags.AddError(fmt.Sprintf("Serialize %s failed", attribute), err.Error())
+	}
+
+	return encoded, diags
+}
+
+// jsonRefreshValue keeps the recorded JSON text while it still describes the
+// server's value, so a refresh reports real drift rather than a difference in
+// key order or whitespace.
+func jsonRefreshValue(recorded types.String, serverValue map[string]any, attribute string) (types.String, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	if !recorded.IsNull() && !recorded.IsUnknown() {
+		var decoded map[string]any
+		if err := json.Unmarshal([]byte(recorded.ValueString()), &decoded); err == nil && reflect.DeepEqual(decoded, serverValue) {
+			return recorded, diags
+		}
+	}
+
+	encoded, err := encodeOptionalJSON(serverValue)
+	if err != nil {
+		diags.AddError(fmt.Sprintf("Serialize %s failed", attribute), err.Error())
+	}
+
+	return encoded, diags
 }

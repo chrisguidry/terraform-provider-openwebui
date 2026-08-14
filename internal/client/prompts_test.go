@@ -142,14 +142,12 @@ func TestListPromptsHitsRoot(t *testing.T) {
 	}
 }
 
-func TestPromptFormMarshal_WithNewFields(t *testing.T) {
-	active := true
+func TestPromptFormMarshalSendsTagsAndNoIsActive(t *testing.T) {
 	form := PromptForm{
-		Command:  "/greet",
-		Name:     "Greet",
-		Content:  "Hello!",
-		IsActive: &active,
-		Tags:     []string{"util", "greeting"},
+		Command: "/greet",
+		Name:    "Greet",
+		Content: "Hello!",
+		Tags:    []string{"util", "greeting"},
 	}
 	data, err := json.Marshal(form)
 	if err != nil {
@@ -159,8 +157,8 @@ func TestPromptFormMarshal_WithNewFields(t *testing.T) {
 	if err := json.Unmarshal(data, &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if out["is_active"] != true {
-		t.Fatalf("expected is_active=true, got %v", out["is_active"])
+	if _, ok := out["is_active"]; ok {
+		t.Fatalf("is_active must not be sent, the API form has no such field: %+v", out)
 	}
 	tags, ok := out["tags"].([]any)
 	if !ok || len(tags) != 2 {

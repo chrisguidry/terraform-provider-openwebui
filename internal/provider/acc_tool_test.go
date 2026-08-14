@@ -50,6 +50,44 @@ class Tools:
 `
 }
 
+func accToolWithUserValvesContent() string {
+	return `"""
+title: Acc User Valves Tool
+description: Tool with per-user valves for acc test
+author: docktape
+version: 0.1.0
+"""
+
+from pydantic import BaseModel
+
+class Tools:
+    class UserValves(BaseModel):
+        verbose: bool = False
+
+    def __init__(self):
+        pass
+
+    def hello(self) -> str:
+        """Returns a greeting."""
+        return "Hello from acc test!"
+`
+}
+
+func testAccToolPublicConfig(toolID string, publicRead, publicWrite bool) string {
+	return fmt.Sprintf(`%s
+resource "openwebui_tool" "test" {
+  tool_id      = %q
+  name         = "Acc Public Tool"
+  description  = "Tool shared with every signed-in user"
+  public_read  = %t
+  public_write = %t
+  content      = <<-PY
+%s
+  PY
+}
+`, testAccProviderConfig(), toolID, publicRead, publicWrite, accToolWithUserValvesContent())
+}
+
 func testAccToolResourceConfig(toolID, name string) string {
 	return fmt.Sprintf(`%s
 resource "openwebui_tool" "test" {
@@ -146,6 +184,35 @@ func TestAccToolDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.openwebui_tool.test", "tool_id", toolID),
 					resource.TestCheckResourceAttr("data.openwebui_tool.test", "name", "Acc DS Tool"),
 					resource.TestCheckResourceAttrSet("data.openwebui_tool.test", "id"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccToolResource_PublicSharingAndUserValves proves two things the server
+// controls: a wildcard user grant survives a write and reads back as
+// public_read, and Open WebUI derives has_user_valves from the tool source.
+func TestAccToolResource_PublicSharingAndUserValves(t *testing.T) {
+	toolID := acctest.RandomWithPrefix("tfaccpublic")
+	toolID = regexp.MustCompile(`-`).ReplaceAllString(toolID, "_")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccToolPublicConfig(toolID, true, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_tool.test", "public_read", "true"),
+					resource.TestCheckResourceAttr("openwebui_tool.test", "public_write", "false"),
+					resource.TestCheckResourceAttr("openwebui_tool.test", "has_user_valves", "true"),
+				),
+			},
+			{
+				Config: testAccToolPublicConfig(toolID, false, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_tool.test", "public_read", "false"),
 				),
 			},
 		},

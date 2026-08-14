@@ -7,10 +7,13 @@ import (
 	"net/url"
 )
 
-// ToolMeta captures descriptive metadata for a tool.
+// ToolMeta captures descriptive metadata for a tool. Open WebUI derives
+// HasUserValves from the tool source on every write, so a form that omits it
+// loses nothing.
 type ToolMeta struct {
-	Description *string        `json:"description,omitempty"`
-	Manifest    map[string]any `json:"manifest,omitempty"`
+	Description   *string        `json:"description,omitempty"`
+	Manifest      map[string]any `json:"manifest,omitempty"`
+	HasUserValves *bool          `json:"has_user_valves,omitempty"`
 }
 
 // ToolForm represents the payload for creating or updating tools.
@@ -182,7 +185,8 @@ func (c *Client) DeleteTool(ctx context.Context, id string) error {
 	return c.do(ctx, http.MethodDelete, path, nil, nil, nil)
 }
 
-// ListTools returns tool summaries.
+// ListTools returns tool summaries. A server started with ENABLE_PLUGINS=False
+// answers with an empty list instead of an error.
 func (c *Client) ListTools(ctx context.Context) ([]ToolUserResponse, error) {
 	var resp []ToolUserResponse
 	if err := c.do(ctx, http.MethodGet, "tools/", nil, nil, &resp); err != nil {
@@ -192,7 +196,8 @@ func (c *Client) ListTools(ctx context.Context) ([]ToolUserResponse, error) {
 	return resp, nil
 }
 
-// ListToolAccess returns tool access summaries.
+// ListToolAccess returns tool access summaries. A server started with
+// ENABLE_PLUGINS=False answers with an empty list instead of an error.
 func (c *Client) ListToolAccess(ctx context.Context) ([]ToolAccessResponse, error) {
 	var resp []ToolAccessResponse
 	if err := c.do(ctx, http.MethodGet, "tools/list", nil, nil, &resp); err != nil {
@@ -202,7 +207,9 @@ func (c *Client) ListToolAccess(ctx context.Context) ([]ToolAccessResponse, erro
 	return resp, nil
 }
 
-// ExportTools returns full tool payloads including content.
+// ExportTools returns full tool payloads including content. The export route
+// carries content for every caller with read access, and ENABLE_PLUGINS does
+// not gate it.
 func (c *Client) ExportTools(ctx context.Context) ([]ToolModel, error) {
 	var resp []ToolModel
 	if err := c.do(ctx, http.MethodGet, "tools/export", nil, nil, &resp); err != nil {

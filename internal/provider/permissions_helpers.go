@@ -12,12 +12,23 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
+// The six permission categories and the keys each one carries, read off
+// DEFAULT_USER_PERMISSIONS in backend/open_webui/config.py at Open WebUI
+// v0.11.0. A group's permissions column is free-form JSON, so the server keeps
+// any key it is given. These lists therefore drive the documentation and the
+// unknown-key warning; they are not a restriction. A key Open WebUI adds later
+// still reaches the server, with a warning telling the practitioner that this
+// build of the provider does not know it.
+//
+// The wire name of the chat import flag is `import`, not `import_`. The backend
+// attribute is ChatPermissions.import_ with Field(alias='import') in
+// backend/open_webui/routers/users.py.
 var (
-	groupPermissionsWorkspaceKeys    = []string{"models", "knowledge", "prompts", "tools", "skills", "models_import", "models_export", "prompts_import", "prompts_export", "tools_import", "tools_export"}
-	groupPermissionsSharingKeys      = []string{"public_models", "public_knowledge", "public_prompts", "public_tools", "models", "knowledge", "prompts", "tools", "skills", "public_skills", "notes", "public_notes", "public_chats", "public_calendars"}
-	groupPermissionsChatKeys         = []string{"controls", "valves", "system_prompt", "params", "file_upload", "delete", "delete_message", "continue_response", "regenerate_response", "rate_response", "edit", "share", "export", "stt", "tts", "call", "multiple_models", "temporary", "temporary_enforced", "web_upload"}
-	groupPermissionsFeaturesKeys     = []string{"direct_tool_servers", "web_search", "image_generation", "code_interpreter", "notes", "memories", "api_keys", "channels", "folders", "automations", "calendar"}
-	groupPermissionsAccessGrantsKeys = []string{"allow_users"}
+	groupPermissionsWorkspaceKeys    = []string{"models", "knowledge", "prompts", "tools", "skills", "models_import", "models_export", "prompts_import", "prompts_export", "tools_import", "tools_export", "skills_import", "skills_export"}
+	groupPermissionsSharingKeys      = []string{"public_models", "public_knowledge", "public_prompts", "public_tools", "models", "knowledge", "prompts", "tools", "skills", "public_skills", "notes", "public_notes", "folders", "open_chats", "public_chats", "public_calendars"}
+	groupPermissionsChatKeys         = []string{"controls", "valves", "system_prompt", "params", "file_upload", "delete", "delete_message", "continue_response", "regenerate_response", "rate_response", "edit", "share", "export", "import", "stt", "tts", "call", "multiple_models", "temporary", "temporary_enforced", "web_upload"}
+	groupPermissionsFeaturesKeys     = []string{"direct_tool_servers", "web_search", "image_generation", "code_interpreter", "notes", "memories", "api_keys", "channels", "folders", "automations", "calendar", "webhooks"}
+	groupPermissionsAccessGrantsKeys = []string{"allow_users", "allow_groups"}
 	groupPermissionsSettingsKeys     = []string{"interface"}
 
 	groupPermissionsAllowedSets = map[string]map[string]struct{}{
@@ -29,6 +40,69 @@ var (
 		"settings":      sliceToSet(groupPermissionsSettingsKeys),
 	}
 )
+
+// The default user permissions route takes a typed model, not the free-form
+// object a group carries, so its key set is its own. Two differences from the
+// group key set, both read off backend/open_webui/routers/users.py at Open WebUI
+// v0.11.0:
+//
+//   - SharingPermissions has no open_chats field, although
+//     DEFAULT_USER_PERMISSIONS carries one and chats.py enforces it. The write
+//     handler dumps the whole model over the stored blob, so every write through
+//     this route deletes sharing.open_chats from the stored config.
+//   - A key the model does not declare is dropped, because the model ignores
+//     extra fields. A key the provider does not know is therefore an error on
+//     this route, where the group resource passes it through with a warning.
+var (
+	defaultUserPermissionsSharingKeys = withoutPermissionKey(groupPermissionsSharingKeys, "open_chats")
+
+	defaultUserPermissionsAllowedSets = map[string]map[string]struct{}{
+		"workspace":     sliceToSet(groupPermissionsWorkspaceKeys),
+		"sharing":       sliceToSet(defaultUserPermissionsSharingKeys),
+		"chat":          sliceToSet(groupPermissionsChatKeys),
+		"features":      sliceToSet(groupPermissionsFeaturesKeys),
+		"access_grants": sliceToSet(groupPermissionsAccessGrantsKeys),
+		"settings":      sliceToSet(groupPermissionsSettingsKeys),
+	}
+)
+
+// defaultUserPermissionsKeys returns the keys one category of the default user
+// permissions carries.
+func defaultUserPermissionsKeys(category string) []string {
+	if category == "sharing" {
+		return defaultUserPermissionsSharingKeys
+	}
+
+	return allowedKeysSlice(category)
+}
+
+// defaultUserPermissionCategoryDescription builds the schema description for one
+// category of the default user permissions, so the documentation follows the key
+// lists rather than a hand-written copy of them.
+func defaultUserPermissionCategoryDescription(category, summary string) string {
+	keys := defaultUserPermissionsKeys(category)
+	quoted := make([]string, 0, len(keys))
+	for _, key := range keys {
+		quoted = append(quoted, "`"+key+"`")
+	}
+
+	return fmt.Sprintf(
+		"%s Every key is required: %s. Open WebUI replaces the whole permissions object on each write, so a key left out would take the value its Pydantic model defaults to.",
+		summary, strings.Join(quoted, ", "),
+	)
+}
+
+func withoutPermissionKey(keys []string, drop string) []string {
+	remaining := make([]string, 0, len(keys))
+	for _, key := range keys {
+		if key == drop {
+			continue
+		}
+		remaining = append(remaining, key)
+	}
+
+	return remaining
+}
 
 // permissionsAttrTypes returns the framework attribute types for the permissions object.
 // Used to construct a types.Object that the framework can hold as unknown/null.
@@ -188,6 +262,9 @@ func flattenPermissions(ctx context.Context, perms map[string]any) (groupPermiss
 	return model, diags
 }
 
+// filterPermissionKeys passes every key through to the server. A key this build
+// of the provider does not know earns a warning, because Open WebUI stores group
+// permissions as a free-form object and a newer server may well accept it.
 func filterPermissionKeys(category string, bools map[string]bool, attribute path.Path, diags *diag.Diagnostics) map[string]bool {
 	allowed, ok := groupPermissionsAllowedSets[category]
 	if !ok {
@@ -198,17 +275,17 @@ func filterPermissionKeys(category string, bools map[string]bool, attribute path
 		return nil
 	}
 
-	allowedList := allowedKeysList(category)
-
 	filtered := make(map[string]bool, len(bools))
 	for key, value := range bools {
 		if _, exists := allowed[key]; !exists {
-			diags.AddAttributeError(
+			diags.AddAttributeWarning(
 				attribute,
-				fmt.Sprintf("Unsupported %s permission key", category),
-				fmt.Sprintf("Supported keys are: %s. Received %q.", allowedList, key),
+				fmt.Sprintf("Unrecognized %s permission key", category),
+				fmt.Sprintf(
+					"The provider knows these %s keys: %s. It sends %q as well, because Open WebUI stores group permissions as a free-form object. Check the spelling if the key has no effect.",
+					category, allowedKeysList(category), key,
+				),
 			)
-			continue
 		}
 
 		filtered[key] = value
@@ -217,9 +294,12 @@ func filterPermissionKeys(category string, bools map[string]bool, attribute path
 	return filtered
 }
 
+// filterPermissionResponse reads the permissions the server returns. It keeps
+// unknown keys, so that a key written through filterPermissionKeys round-trips
+// into state instead of showing up as a permanent diff. A value that is not a
+// boolean cannot live in the map of booleans, so it is dropped with a warning.
 func filterPermissionResponse(category string, nested map[string]any, diags *diag.Diagnostics) map[string]bool {
-	allowed, ok := groupPermissionsAllowedSets[category]
-	if !ok {
+	if _, ok := groupPermissionsAllowedSets[category]; !ok {
 		diags.AddError(
 			"Internal provider error",
 			fmt.Sprintf("Unknown permission category %s", category),
@@ -231,14 +311,10 @@ func filterPermissionResponse(category string, nested map[string]any, diags *dia
 	for key, raw := range nested {
 		boolVal, ok := raw.(bool)
 		if !ok {
-			diags.AddError(
+			diags.AddWarning(
 				"Unexpected permissions response",
-				fmt.Sprintf("Expected permissions.%s.%s to be a boolean", category, key),
+				fmt.Sprintf("Open WebUI returned permissions.%s.%s as %T rather than a boolean. The provider drops it.", category, key, raw),
 			)
-			continue
-		}
-
-		if _, exists := allowed[key]; !exists {
 			continue
 		}
 
@@ -248,7 +324,33 @@ func filterPermissionResponse(category string, nested map[string]any, diags *dia
 	return filtered
 }
 
+// permissionCategoryDescription builds the schema description for one permission
+// category from the key lists above, so the documentation cannot drift from the
+// keys the provider knows.
+func permissionCategoryDescription(category, summary string) string {
+	return fmt.Sprintf(
+		"%s Keys Open WebUI v0.11.0 defines: %s. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.",
+		summary, permissionKeysMarkdown(category),
+	)
+}
+
+// permissionKeysMarkdown renders a category's known keys as an inline-code list
+// for the schema descriptions, so the documentation follows the lists above.
+func permissionKeysMarkdown(category string) string {
+	keys := allowedKeysSlice(category)
+	quoted := make([]string, 0, len(keys))
+	for _, key := range keys {
+		quoted = append(quoted, "`"+key+"`")
+	}
+
+	return strings.Join(quoted, ", ")
+}
+
 func allowedKeysList(category string) string {
+	return strings.Join(allowedKeysSlice(category), ", ")
+}
+
+func allowedKeysSlice(category string) []string {
 	var keys []string
 
 	switch category {
@@ -264,9 +366,7 @@ func allowedKeysList(category string) string {
 		keys = groupPermissionsAccessGrantsKeys
 	case "settings":
 		keys = groupPermissionsSettingsKeys
-	default:
-		return ""
 	}
 
-	return strings.Join(keys, ", ")
+	return keys
 }

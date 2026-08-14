@@ -33,12 +33,13 @@ type promptResourceModel struct {
 	Command     types.String `tfsdk:"command"`
 	Name        types.String `tfsdk:"name"`
 	Content     types.String `tfsdk:"content"`
-	IsActive    types.Bool   `tfsdk:"is_active"`
 	Tags        types.List   `tfsdk:"tags"`
 	DataJSON    types.String `tfsdk:"data_json"`
 	MetaJSON    types.String `tfsdk:"meta_json"`
 	ReadGroups  types.List   `tfsdk:"read_groups"`
 	WriteGroups types.List   `tfsdk:"write_groups"`
+	PublicRead  types.Bool   `tfsdk:"public_read"`
+	PublicWrite types.Bool   `tfsdk:"public_write"`
 	CreatedAt   types.String `tfsdk:"created_at"`
 	UpdatedAt   types.String `tfsdk:"updated_at"`
 	UserID      types.String `tfsdk:"user_id"`
@@ -76,12 +77,6 @@ func (r *promptResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Required:    true,
 				Description: "Prompt template text. Use `{{variable}}` for user-fillable placeholders.",
 			},
-			"is_active": schema.BoolAttribute{
-				Optional:      true,
-				Computed:      true,
-				Description:   "Whether the prompt is active and available to users. Defaults to `true`.",
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
-			},
 			"tags": schema.ListAttribute{
 				ElementType:   types.StringType,
 				Optional:      true,
@@ -103,7 +98,7 @@ func (r *promptResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				ElementType:   types.StringType,
 				Optional:      true,
 				Computed:      true,
-				Description:   "List of group names or IDs granted read access. Leave unset or empty for public access.",
+				Description:   "List of group names or IDs granted read access.",
 				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"write_groups": schema.ListAttribute{
@@ -112,6 +107,18 @@ func (r *promptResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Computed:      true,
 				Description:   "List of group names or IDs granted write access.",
 				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"public_read": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				Description:   "When `true`, every signed-in user can read the prompt. This is what the Open WebUI interface calls public sharing.",
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
+			"public_write": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				Description:   "When `true`, every signed-in user can edit the prompt.",
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"created_at": schema.StringAttribute{
 				Computed:      true,
@@ -160,10 +167,6 @@ func (r *promptResource) Create(ctx context.Context, req resource.CreateRequest,
 		Content: plan.Content.ValueString(),
 	}
 
-	if !plan.IsActive.IsNull() && !plan.IsActive.IsUnknown() {
-		v := plan.IsActive.ValueBool()
-		form.IsActive = &v
-	}
 	if !plan.Tags.IsNull() && !plan.Tags.IsUnknown() {
 		var tags []string
 		resp.Diagnostics.Append(plan.Tags.ElementsAs(ctx, &tags, false)...)
@@ -191,7 +194,7 @@ func (r *promptResource) Create(ctx context.Context, req resource.CreateRequest,
 	readIDs := resolveGroupNamesToIDs(ctx, r.client, readNames, path.Root("read_groups"), &resp.Diagnostics)
 	writeIDs := resolveGroupNamesToIDs(ctx, r.client, writeNames, path.Root("write_groups"), &resp.Diagnostics)
 
-	form.AccessControl = buildAccessControl(readIDs, writeIDs)
+	form.AccessControl = withPublicAccess(buildAccessControl(readIDs, writeIDs), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -268,10 +271,6 @@ func (r *promptResource) Update(ctx context.Context, req resource.UpdateRequest,
 		Content: plan.Content.ValueString(),
 	}
 
-	if !plan.IsActive.IsNull() && !plan.IsActive.IsUnknown() {
-		v := plan.IsActive.ValueBool()
-		form.IsActive = &v
-	}
 	if !plan.Tags.IsNull() && !plan.Tags.IsUnknown() {
 		var tags []string
 		resp.Diagnostics.Append(plan.Tags.ElementsAs(ctx, &tags, false)...)
@@ -299,7 +298,7 @@ func (r *promptResource) Update(ctx context.Context, req resource.UpdateRequest,
 	readIDs := resolveGroupNamesToIDs(ctx, r.client, readNames, path.Root("read_groups"), &resp.Diagnostics)
 	writeIDs := resolveGroupNamesToIDs(ctx, r.client, writeNames, path.Root("write_groups"), &resp.Diagnostics)
 
-	form.AccessControl = buildAccessControl(readIDs, writeIDs)
+	form.AccessControl = withPublicAccess(buildAccessControl(readIDs, writeIDs), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -382,12 +381,6 @@ func promptResponseToModel(ctx context.Context, apiClient *client.Client, resp *
 		Command: types.StringValue(resp.Command),
 		Name:    types.StringValue(resp.Name),
 		Content: types.StringValue(resp.Content),
-		IsActive: func() types.Bool {
-			if resp.IsActive != nil {
-				return types.BoolValue(*resp.IsActive)
-			}
-			return types.BoolValue(true) // API default
-		}(),
 		Tags: func() types.List {
 			if resp.Tags == nil {
 				return types.ListNull(types.StringType)
@@ -400,6 +393,8 @@ func promptResponseToModel(ctx context.Context, apiClient *client.Client, resp *
 		}(),
 		ReadGroups:  readList,
 		WriteGroups: writeList,
+		PublicRead:  types.BoolValue(publicAccessFromControl(resp.AccessControl, "read")),
+		PublicWrite: types.BoolValue(publicAccessFromControl(resp.AccessControl, "write")),
 		CreatedAt:   formatDateValue(resp.CreatedAt),
 		UpdatedAt:   formatDateValue(resp.UpdatedAt),
 		UserID:      types.StringValue(resp.UserID),

@@ -3,12 +3,18 @@
 page_title: "openwebui_tool_servers_config Resource - openwebui"
 subcategory: ""
 description: |-
-  Manages the list of external tool server registrations for Open WebUI.
+  Manages the list of external tool server registrations for Open WebUI as a single object.
+  ~> Note: openwebui_tool_servers_config and openwebui_tool_server manage the same list. Use one or the other, never both. openwebui_tool_server is the recommended one: it declares one connection at a time, it can adopt a connection made in the web UI, and it preserves every field of a connection that it does not model.
+  ~> Note: This resource owns the whole list. A connection missing from connections is deleted, and a field of a connection that this resource does not model, such as an inline OpenAPI spec, is dropped on write. The encrypted OAuth registration in each connection's info is the one exception: it is read back and carried across every write.
 ---
 
 # openwebui_tool_servers_config (Resource)
 
-Manages the list of external tool server registrations for Open WebUI.
+Manages the list of external tool server registrations for Open WebUI as a single object.
+
+~> **Note:** `openwebui_tool_servers_config` and `openwebui_tool_server` manage the same list. Use one or the other, never both. `openwebui_tool_server` is the recommended one: it declares one connection at a time, it can adopt a connection made in the web UI, and it preserves every field of a connection that it does not model.
+
+~> **Note:** This resource owns the whole list. A connection missing from `connections` is deleted, and a field of a connection that this resource does not model, such as an inline OpenAPI `spec`, is dropped on write. The encrypted OAuth registration in each connection's `info` is the one exception: it is read back and carried across every write.
 
 ## Example Usage
 

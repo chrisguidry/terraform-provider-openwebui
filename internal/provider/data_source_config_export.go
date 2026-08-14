@@ -35,12 +35,15 @@ func (d *configExportDataSource) Metadata(_ context.Context, req datasource.Meta
 // Schema defines the config export schema.
 func (d *configExportDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Exports the current Open WebUI configuration as a JSON blob. Use together with `openwebui_config_import` to back up and restore configuration.\n\n~> **Warning:** The exported JSON may contain secrets. Treat it as sensitive.",
+		MarkdownDescription: "Exports the current Open WebUI configuration as a JSON blob. Use together with `openwebui_config_import` to back up and restore configuration.\n\n" +
+			"Open WebUI v0.11.0 exports flat dotted keys, such as `ui.banners` and `audio.stt.engine`, one per stored configuration row. " +
+			"Open WebUI v0.9.x exported a nested tree instead, so an export taken from v0.9.x cannot be fed back into v0.11.0.\n\n" +
+			"~> **Warning:** The exported JSON may contain secrets. Treat it as sensitive.",
 		Attributes: map[string]schema.Attribute{
 			"config_json": schema.StringAttribute{
 				Computed:    true,
 				Sensitive:   true,
-				Description: "Full current configuration of Open WebUI as a JSON string.",
+				Description: "Full current configuration of Open WebUI as a JSON string of flat dotted keys.",
 			},
 		},
 	}

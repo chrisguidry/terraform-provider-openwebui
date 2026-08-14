@@ -9,11 +9,12 @@ import (
 )
 
 // PromptForm represents the payload for creating or updating prompt definitions.
+// The API has no is_active field on this form: a prompt is created active, and
+// POST /prompts/id/{command}/toggle is the only way to change that.
 type PromptForm struct {
 	Command       string         `json:"command"`
 	Name          string         `json:"name"`
 	Content       string         `json:"content"`
-	IsActive      *bool          `json:"is_active,omitempty"`
 	Tags          []string       `json:"tags,omitempty"`
 	Data          map[string]any `json:"data,omitempty"`
 	Meta          map[string]any `json:"meta,omitempty"`
@@ -39,7 +40,6 @@ type PromptModel struct {
 	Command       string         `json:"command"`
 	Name          string         `json:"name"`
 	Content       string         `json:"content"`
-	IsActive      *bool          `json:"is_active,omitempty"`
 	Tags          []string       `json:"tags,omitempty"`
 	Data          map[string]any `json:"data,omitempty"`
 	Meta          map[string]any `json:"meta,omitempty"`

@@ -194,6 +194,71 @@ resource "openwebui_group" "test" {
 	})
 }
 
+// The seven permission keys Open WebUI v0.11.0 carries that the provider used to
+// refuse. Each one round-trips through the API, so state must show it back.
+func TestAccGroupResource_V011Permissions(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-group-v011-perms")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`%s
+resource "openwebui_group" "test" {
+  name        = %q
+  description = "v0.11 permission keys"
+  permissions = {
+    workspace     = { skills_import = true, skills_export = false }
+    sharing       = { folders = true, open_chats = false }
+    access_grants = { allow_groups = false }
+    chat          = { "import" = false }
+    features      = { webhooks = true }
+  }
+}
+`, testAccProviderConfig(), name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_group.test", "permissions.workspace.skills_import", "true"),
+					resource.TestCheckResourceAttr("openwebui_group.test", "permissions.workspace.skills_export", "false"),
+					resource.TestCheckResourceAttr("openwebui_group.test", "permissions.sharing.folders", "true"),
+					resource.TestCheckResourceAttr("openwebui_group.test", "permissions.sharing.open_chats", "false"),
+					resource.TestCheckResourceAttr("openwebui_group.test", "permissions.access_grants.allow_groups", "false"),
+					resource.TestCheckResourceAttr("openwebui_group.test", "permissions.chat.import", "false"),
+					resource.TestCheckResourceAttr("openwebui_group.test", "permissions.features.webhooks", "true"),
+				),
+			},
+		},
+	})
+}
+
+// A key this provider build does not know still reaches the server, so that an
+// Open WebUI release adding a permission does not block an apply.
+func TestAccGroupResource_UnknownPermissionKey(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-group-unknown-perm")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`%s
+resource "openwebui_group" "test" {
+  name        = %q
+  description = "unknown permission key"
+  permissions = {
+    workspace = { models = true, not_a_real_key_yet = true }
+  }
+}
+`, testAccProviderConfig(), name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_group.test", "permissions.workspace.models", "true"),
+					resource.TestCheckResourceAttr("openwebui_group.test", "permissions.workspace.not_a_real_key_yet", "true"),
+				),
+			},
+		},
+	})
+}
+
 func testAccGroupDataSourceConfig(name string) string {
 	return fmt.Sprintf(`%s
 resource "openwebui_group" "seed" {

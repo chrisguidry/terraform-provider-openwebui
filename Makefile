@@ -1,4 +1,4 @@
-.PHONY: build test testacc tidy fmt clean docs
+.PHONY: build test testacc testacc-up testacc-down tidy fmt clean docs
 
 -include .env
 export
@@ -25,6 +25,12 @@ test:
 
 testacc:
 	$(GO) test ./internal/provider/... -v -count=1 -timeout 30m
+
+testacc-up:
+	./scripts/testacc-up.sh
+
+testacc-down:
+	./scripts/testacc-down.sh
 
 tidy:
 	$(GO) mod tidy

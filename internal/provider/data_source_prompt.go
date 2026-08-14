@@ -53,10 +53,6 @@ func (d *promptDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Computed:    true,
 				Description: "Prompt template text.",
 			},
-			"is_active": schema.BoolAttribute{
-				Computed:    true,
-				Description: "Whether the prompt is active and available to users.",
-			},
 			"tags": schema.ListAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
@@ -79,6 +75,14 @@ func (d *promptDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				ElementType: types.StringType,
 				Computed:    true,
 				Description: "Write-access group names currently applied to this prompt.",
+			},
+			"public_read": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Whether every signed-in user can read the prompt.",
+			},
+			"public_write": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Whether every signed-in user can edit the prompt.",
 			},
 			"created_at": schema.StringAttribute{
 				Computed:    true,

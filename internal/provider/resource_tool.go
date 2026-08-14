@@ -28,19 +28,22 @@ type toolResource struct {
 
 // toolResourceModel captures Terraform state for tools.
 type toolResourceModel struct {
-	ID           types.String `tfsdk:"id"`
-	ToolID       types.String `tfsdk:"tool_id"`
-	Name         types.String `tfsdk:"name"`
-	Content      types.String `tfsdk:"content"`
-	Description  types.String `tfsdk:"description"`
-	ManifestJSON types.String `tfsdk:"manifest_json"`
-	ReadGroups   types.List   `tfsdk:"read_groups"`
-	WriteGroups  types.List   `tfsdk:"write_groups"`
-	SpecsJSON    types.String `tfsdk:"specs_json"`
-	UserID       types.String `tfsdk:"user_id"`
-	CreatedAt    types.Int64  `tfsdk:"created_at"`
-	UpdatedAt    types.Int64  `tfsdk:"updated_at"`
-	WriteAccess  types.Bool   `tfsdk:"write_access"`
+	ID            types.String `tfsdk:"id"`
+	ToolID        types.String `tfsdk:"tool_id"`
+	Name          types.String `tfsdk:"name"`
+	Content       types.String `tfsdk:"content"`
+	Description   types.String `tfsdk:"description"`
+	ManifestJSON  types.String `tfsdk:"manifest_json"`
+	ReadGroups    types.List   `tfsdk:"read_groups"`
+	WriteGroups   types.List   `tfsdk:"write_groups"`
+	PublicRead    types.Bool   `tfsdk:"public_read"`
+	PublicWrite   types.Bool   `tfsdk:"public_write"`
+	SpecsJSON     types.String `tfsdk:"specs_json"`
+	UserID        types.String `tfsdk:"user_id"`
+	CreatedAt     types.Int64  `tfsdk:"created_at"`
+	UpdatedAt     types.Int64  `tfsdk:"updated_at"`
+	WriteAccess   types.Bool   `tfsdk:"write_access"`
+	HasUserValves types.Bool   `tfsdk:"has_user_valves"`
 }
 
 // NewToolResource constructs a new tool resource.
@@ -101,8 +104,8 @@ func (r *toolResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "List of group names or IDs granted read access. Leave unset or empty for public access.",
-				MarkdownDescription: "List of group names or IDs granted read access. Leave unset or empty for public access.",
+				Description:         "List of group names or IDs granted read access.",
+				MarkdownDescription: "List of group names or IDs granted read access.",
 				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"write_groups": schema.ListAttribute{
@@ -112,6 +115,20 @@ func (r *toolResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Description:         "List of group names or IDs granted write access.",
 				MarkdownDescription: "List of group names or IDs granted write access.",
 				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"public_read": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "When true, every signed-in user can read the tool. This is what the Open WebUI interface calls public sharing.",
+				MarkdownDescription: "When `true`, every signed-in user can read the tool. This is what the Open WebUI interface calls public sharing.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
+			"public_write": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "When true, every signed-in user can edit the tool.",
+				MarkdownDescription: "When `true`, every signed-in user can edit the tool.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"specs_json": schema.StringAttribute{
 				Computed:            true,
@@ -139,6 +156,11 @@ func (r *toolResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Description:         "Whether the authenticated user has write access to this tool. Read-only; set by Open WebUI.",
 				MarkdownDescription: "Whether the authenticated user has write access to this tool. Read-only; set by Open WebUI.",
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
+			"has_user_valves": schema.BoolAttribute{
+				Computed:            true,
+				Description:         "Whether the tool source declares a UserValves class. Open WebUI derives this from the content on every write.",
+				MarkdownDescription: "Whether the tool source declares a `UserValves` class. Open WebUI derives this from `content` on every write.",
 			},
 		},
 	}
@@ -329,7 +351,7 @@ func toolFormFromPlan(ctx context.Context, apiClient *client.Client, plan toolRe
 		Name:          plan.Name.ValueString(),
 		Content:       plan.Content.ValueString(),
 		Meta:          meta,
-		AccessControl: buildAccessControl(readIDs, writeIDs),
+		AccessControl: withPublicAccess(buildAccessControl(readIDs, writeIDs), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool()),
 	}, diags
 }
 
@@ -395,23 +417,30 @@ func toolResponseToModel(ctx context.Context, apiClient *client.Client, access *
 	}
 
 	state := toolResourceModel{
-		ID:           types.StringValue(access.ID),
-		ToolID:       types.StringValue(access.ID),
-		Name:         types.StringValue(access.Name),
-		Content:      contentValue,
-		Description:  description,
-		ManifestJSON: manifestJSON,
-		ReadGroups:   readList,
-		WriteGroups:  writeList,
-		SpecsJSON:    specsJSON,
-		UserID:       types.StringValue(access.UserID),
-		CreatedAt:    types.Int64Value(access.CreatedAt),
-		UpdatedAt:    types.Int64Value(access.UpdatedAt),
-		WriteAccess:  types.BoolNull(),
+		ID:            types.StringValue(access.ID),
+		ToolID:        types.StringValue(access.ID),
+		Name:          types.StringValue(access.Name),
+		Content:       contentValue,
+		Description:   description,
+		ManifestJSON:  manifestJSON,
+		ReadGroups:    readList,
+		WriteGroups:   writeList,
+		PublicRead:    types.BoolValue(publicAccessFromControl(access.AccessControl, "read")),
+		PublicWrite:   types.BoolValue(publicAccessFromControl(access.AccessControl, "write")),
+		SpecsJSON:     specsJSON,
+		UserID:        types.StringValue(access.UserID),
+		CreatedAt:     types.Int64Value(access.CreatedAt),
+		UpdatedAt:     types.Int64Value(access.UpdatedAt),
+		WriteAccess:   types.BoolNull(),
+		HasUserValves: types.BoolValue(false),
 	}
 
 	if access.WriteAccess != nil {
 		state.WriteAccess = types.BoolValue(*access.WriteAccess)
+	}
+
+	if access.Meta.HasUserValves != nil {
+		state.HasUserValves = types.BoolValue(*access.Meta.HasUserValves)
 	}
 
 	return state, diags

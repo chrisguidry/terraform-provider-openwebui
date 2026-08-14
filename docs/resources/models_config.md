@@ -25,6 +25,8 @@ resource "openwebui_models_config" "example" {
 
 ### Optional
 
+- `default_model_metadata_json` (String) Default model metadata as a JSON object. Open WebUI stores it under `models.default_metadata`.
+- `default_model_params_json` (String) Default model parameters as a JSON object. Open WebUI stores it under `models.default_params`.
 - `default_models` (String) Comma-separated list of model IDs shown by default.
 - `default_pinned_models` (String) Comma-separated list of model IDs pinned at the top of the model list.
 - `model_order_list` (List of String) Ordered list of model IDs controlling display order.

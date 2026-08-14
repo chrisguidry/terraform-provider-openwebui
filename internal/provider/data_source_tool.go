@@ -21,19 +21,22 @@ type toolDataSource struct {
 
 // toolDataSourceModel maps data source inputs and outputs.
 type toolDataSourceModel struct {
-	ToolID       types.String `tfsdk:"tool_id"`
-	ID           types.String `tfsdk:"id"`
-	Name         types.String `tfsdk:"name"`
-	Content      types.String `tfsdk:"content"`
-	Description  types.String `tfsdk:"description"`
-	ManifestJSON types.String `tfsdk:"manifest_json"`
-	ReadGroups   types.List   `tfsdk:"read_groups"`
-	WriteGroups  types.List   `tfsdk:"write_groups"`
-	SpecsJSON    types.String `tfsdk:"specs_json"`
-	UserID       types.String `tfsdk:"user_id"`
-	CreatedAt    types.Int64  `tfsdk:"created_at"`
-	UpdatedAt    types.Int64  `tfsdk:"updated_at"`
-	WriteAccess  types.Bool   `tfsdk:"write_access"`
+	ToolID        types.String `tfsdk:"tool_id"`
+	ID            types.String `tfsdk:"id"`
+	Name          types.String `tfsdk:"name"`
+	Content       types.String `tfsdk:"content"`
+	Description   types.String `tfsdk:"description"`
+	ManifestJSON  types.String `tfsdk:"manifest_json"`
+	ReadGroups    types.List   `tfsdk:"read_groups"`
+	WriteGroups   types.List   `tfsdk:"write_groups"`
+	PublicRead    types.Bool   `tfsdk:"public_read"`
+	PublicWrite   types.Bool   `tfsdk:"public_write"`
+	SpecsJSON     types.String `tfsdk:"specs_json"`
+	UserID        types.String `tfsdk:"user_id"`
+	CreatedAt     types.Int64  `tfsdk:"created_at"`
+	UpdatedAt     types.Int64  `tfsdk:"updated_at"`
+	WriteAccess   types.Bool   `tfsdk:"write_access"`
+	HasUserValves types.Bool   `tfsdk:"has_user_valves"`
 }
 
 // NewToolDataSource constructs a new tool data source.
@@ -93,6 +96,16 @@ func (d *toolDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Description:         "Write-access group names currently applied to this tool.",
 				MarkdownDescription: "Write-access group names currently applied to this tool.",
 			},
+			"public_read": schema.BoolAttribute{
+				Computed:            true,
+				Description:         "Whether every signed-in user can read the tool.",
+				MarkdownDescription: "Whether every signed-in user can read the tool.",
+			},
+			"public_write": schema.BoolAttribute{
+				Computed:            true,
+				Description:         "Whether every signed-in user can edit the tool.",
+				MarkdownDescription: "Whether every signed-in user can edit the tool.",
+			},
 			"specs_json": schema.StringAttribute{
 				Computed:            true,
 				Description:         "JSON OpenAPI-style specification of the tool's functions.",
@@ -117,6 +130,11 @@ func (d *toolDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Computed:            true,
 				Description:         "Whether the authenticated user has write access.",
 				MarkdownDescription: "Whether the authenticated user has write access.",
+			},
+			"has_user_valves": schema.BoolAttribute{
+				Computed:            true,
+				Description:         "Whether the tool source declares a UserValves class.",
+				MarkdownDescription: "Whether the tool source declares a `UserValves` class.",
 			},
 		},
 	}

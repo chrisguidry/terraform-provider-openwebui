@@ -37,12 +37,15 @@ resource "openwebui_tool" "example" {
 
 - `description` (String) Short description shown in the Open WebUI interface.
 - `manifest_json` (String) JSON manifest derived from the source frontmatter. Read-only; set by Open WebUI.
-- `read_groups` (List of String) List of group names or IDs granted read access. Leave unset or empty for public access.
+- `public_read` (Boolean) When `true`, every signed-in user can read the tool. This is what the Open WebUI interface calls public sharing.
+- `public_write` (Boolean) When `true`, every signed-in user can edit the tool.
+- `read_groups` (List of String) List of group names or IDs granted read access.
 - `write_groups` (List of String) List of group names or IDs granted write access.
 
 ### Read-Only
 
 - `created_at` (Number) Unix timestamp of creation. Set by Open WebUI.
+- `has_user_valves` (Boolean) Whether the tool source declares a `UserValves` class. Open WebUI derives this from `content` on every write.
 - `id` (String) UUID assigned by Open WebUI on create.
 - `specs_json` (String) JSON OpenAPI-style specification of the tool's functions. Read-only; set by Open WebUI.
 - `updated_at` (Number) Unix timestamp of last update. Set by Open WebUI.

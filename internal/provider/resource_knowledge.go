@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -29,10 +30,10 @@ type knowledgeResourceModel struct {
 	ID          types.String `tfsdk:"id"`
 	Name        types.String `tfsdk:"name"`
 	Description types.String `tfsdk:"description"`
-	DataJSON    types.String `tfsdk:"data_json"`
-	MetaJSON    types.String `tfsdk:"meta_json"`
 	ReadGroups  types.List   `tfsdk:"read_groups"`
 	WriteGroups types.List   `tfsdk:"write_groups"`
+	PublicRead  types.Bool   `tfsdk:"public_read"`
+	PublicWrite types.Bool   `tfsdk:"public_write"`
 	CreatedAt   types.String `tfsdk:"created_at"`
 	UpdatedAt   types.String `tfsdk:"updated_at"`
 	UserID      types.String `tfsdk:"user_id"`
@@ -51,7 +52,7 @@ func (r *knowledgeResource) Metadata(_ context.Context, req resource.MetadataReq
 // Schema describes the resource schema.
 func (r *knowledgeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a knowledge base entry in Open WebUI.\n\nOmit both `read_groups` and `write_groups` to leave the entry publicly accessible.",
+		MarkdownDescription: "Manages a knowledge base entry in Open WebUI.\n\nWith no groups and neither `public_read` nor `public_write`, the entry is visible to its owner and to admins only. Set `public_read = true` to share it with every signed-in user.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -66,31 +67,31 @@ func (r *knowledgeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Required:    true,
 				Description: "Description shown in the Open WebUI interface.",
 			},
-			"data_json": schema.StringAttribute{
-				Optional:      true,
-				Computed:      true,
-				Description:   "Optional JSON object sent as additional metadata during create and update. e.g. `jsonencode({ category = \"support\" })`.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"meta_json": schema.StringAttribute{
-				Optional:      true,
-				Computed:      true,
-				Description:   "JSON metadata stored on the knowledge entry. Open WebUI may enrich this after create. e.g. `jsonencode({ source = \"internal\" })`.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
 			"read_groups": schema.ListAttribute{
 				ElementType:   types.StringType,
 				Optional:      true,
 				Computed:      true,
-				Description:   "List of group names or IDs granted read access. Leave unset or empty for public access.",
+				Description:   "List of group names or IDs granted read access.",
 				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"write_groups": schema.ListAttribute{
 				ElementType:   types.StringType,
 				Optional:      true,
 				Computed:      true,
-				Description:   "List of group names or IDs granted write access. Groups here automatically receive read access too. Leave unset or empty for public access.",
+				Description:   "List of group names or IDs granted write access. Groups here automatically receive read access too.",
 				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"public_read": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				Description:   "When `true`, every signed-in user can read the knowledge base. This is what the Open WebUI interface calls public sharing.",
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
+			"public_write": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				Description:   "When `true`, every signed-in user can edit the knowledge base.",
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"created_at": schema.StringAttribute{
 				Computed:      true,
@@ -143,9 +144,7 @@ func (r *knowledgeResource) Create(ctx context.Context, req resource.CreateReque
 	readIDs := resolveGroupNamesToIDs(ctx, r.client, readNames, path.Root("read_groups"), &resp.Diagnostics)
 	writeIDs := resolveGroupNamesToIDs(ctx, r.client, writeNames, path.Root("write_groups"), &resp.Diagnostics)
 
-	form.AccessControl = buildAccessControl(readIDs, writeIDs)
-	form.Data = decodeOptionalJSON(plan.DataJSON, path.Root("data_json"), &resp.Diagnostics)
-	form.Meta = decodeOptionalJSON(plan.MetaJSON, path.Root("meta_json"), &resp.Diagnostics)
+	form.AccessControl = withPublicAccess(buildAccessControl(readIDs, writeIDs), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -228,9 +227,7 @@ func (r *knowledgeResource) Update(ctx context.Context, req resource.UpdateReque
 	readIDs := resolveGroupNamesToIDs(ctx, r.client, readNames, path.Root("read_groups"), &resp.Diagnostics)
 	writeIDs := resolveGroupNamesToIDs(ctx, r.client, writeNames, path.Root("write_groups"), &resp.Diagnostics)
 
-	form.AccessControl = buildAccessControl(readIDs, writeIDs)
-	form.Data = decodeOptionalJSON(plan.DataJSON, path.Root("data_json"), &resp.Diagnostics)
-	form.Meta = decodeOptionalJSON(plan.MetaJSON, path.Root("meta_json"), &resp.Diagnostics)
+	form.AccessControl = withPublicAccess(buildAccessControl(readIDs, writeIDs), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -289,16 +286,6 @@ func (r *knowledgeResource) ImportState(ctx context.Context, req resource.Import
 func knowledgeResponseToModel(ctx context.Context, apiClient *client.Client, resp client.KnowledgeFilesResponse) (knowledgeResourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	data, err := encodeOptionalJSON(resp.Data)
-	if err != nil {
-		diags.AddError("Serialize data", err.Error())
-	}
-
-	meta, err := encodeOptionalJSON(resp.Meta)
-	if err != nil {
-		diags.AddError("Serialize metadata", err.Error())
-	}
-
 	readIDs := extractGroupIDsFromAccessControl(resp.AccessControl, "read")
 	writeIDs := extractGroupIDsFromAccessControl(resp.AccessControl, "write")
 
@@ -329,10 +316,10 @@ func knowledgeResponseToModel(ctx context.Context, apiClient *client.Client, res
 		ID:          types.StringValue(resp.ID),
 		Name:        types.StringValue(resp.Name),
 		Description: types.StringValue(resp.Description),
-		DataJSON:    data,
-		MetaJSON:    meta,
 		ReadGroups:  readList,
 		WriteGroups: writeList,
+		PublicRead:  types.BoolValue(publicAccessFromControl(resp.AccessControl, "read")),
+		PublicWrite: types.BoolValue(publicAccessFromControl(resp.AccessControl, "write")),
 		CreatedAt:   formatDateValue(resp.CreatedAt),
 		UpdatedAt:   formatDateValue(resp.UpdatedAt),
 		UserID:      types.StringValue(resp.UserID),

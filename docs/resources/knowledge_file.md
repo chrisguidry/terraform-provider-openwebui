@@ -44,5 +44,5 @@ resource "openwebui_knowledge_file" "example" {
 
 ### Read-Only
 
-- `file_json` (String) JSON representation of the attached file entry as returned by Open WebUI.
+- `file_json` (String) JSON metadata for the attached file as returned by Open WebUI: identifiers, filename, hash, size, and timestamps. The knowledge file listing never carries the file's extracted content.
 - `id` (String) Composite identifier in the form `knowledge_id:file_id`.

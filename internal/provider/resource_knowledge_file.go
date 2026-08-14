@@ -78,7 +78,7 @@ func (r *knowledgeFileResource) Schema(_ context.Context, _ resource.SchemaReque
 			},
 			"file_json": schema.StringAttribute{
 				Computed:    true,
-				Description: "JSON representation of the attached file entry as returned by Open WebUI.",
+				Description: "JSON metadata for the attached file as returned by Open WebUI: identifiers, filename, hash, size, and timestamps. The knowledge file listing never carries the file's extracted content.",
 			},
 		},
 	}
@@ -220,7 +220,7 @@ func (r *knowledgeFileResource) ImportState(ctx context.Context, req resource.Im
 func readKnowledgeFileState(ctx context.Context, apiClient *client.Client, knowledgeID string, fileID string) (knowledgeFileResourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	list, err := apiClient.ListKnowledgeFiles(ctx, knowledgeID, "", "", "", "", 1)
+	files, err := apiClient.ListKnowledgeFiles(ctx, knowledgeID)
 	if err != nil {
 		if err == client.ErrNotFound {
 			return knowledgeFileResourceModel{}, diags
@@ -229,7 +229,7 @@ func readKnowledgeFileState(ctx context.Context, apiClient *client.Client, knowl
 		return knowledgeFileResourceModel{}, diags
 	}
 
-	for _, item := range list.Items {
+	for _, item := range files {
 		if item.ID == fileID {
 			fileJSON, err := encodeOptionalJSONValue(item)
 			if err != nil {

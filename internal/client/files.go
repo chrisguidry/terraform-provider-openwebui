@@ -7,14 +7,25 @@ import (
 	"net/url"
 )
 
-// filesListPageSize mirrors the backend PAGE_SIZE for GET /files/.
-const filesListPageSize = 30
+// filesListPageSize mirrors the backend PAGE_SIZE for GET /files/. The route
+// applies it to every caller and takes no page-size parameter.
+const filesListPageSize = 50
 
 // FileMeta captures metadata returned with files.
 type FileMeta struct {
 	Name        *string `json:"name,omitempty"`
 	ContentType *string `json:"content_type,omitempty"`
 	Size        *int64  `json:"size,omitempty"`
+}
+
+// FileMetadataResponse is the metadata-only file record the knowledge endpoints
+// return. It never carries the extracted content.
+type FileMetadataResponse struct {
+	ID        string         `json:"id"`
+	Hash      *string        `json:"hash,omitempty"`
+	Meta      map[string]any `json:"meta,omitempty"`
+	CreatedAt int64          `json:"created_at"`
+	UpdatedAt int64          `json:"updated_at"`
 }
 
 // FileModelResponse captures file details returned by list/search/upload endpoints.

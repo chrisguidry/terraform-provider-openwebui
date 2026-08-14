@@ -9,10 +9,12 @@ import (
 )
 
 // AddPipelineForm represents the payload for registering a pipeline by URL.
+// AddPipelineForm in backend/open_webui/routers/pipelines.py declares url and
+// urlIdx only. The handler takes the pipeline server's API key from the OpenAI
+// connection at urlIdx, so there is no key to send here.
 type AddPipelineForm struct {
 	URL    string `json:"url"`
 	URLIdx int    `json:"urlIdx"`
-	Key    string `json:"key,omitempty"`
 }
 
 // DeletePipelineForm represents the payload for deleting a pipeline.
@@ -22,9 +24,9 @@ type DeletePipelineForm struct {
 }
 
 // AddPipeline registers a new pipeline by URL.
-func (c *Client) AddPipeline(ctx context.Context, urlValue string, urlIdx int, key string) (map[string]any, error) {
+func (c *Client) AddPipeline(ctx context.Context, urlValue string, urlIdx int) (map[string]any, error) {
 	var resp map[string]any
-	form := AddPipelineForm{URL: urlValue, URLIdx: urlIdx, Key: key}
+	form := AddPipelineForm{URL: urlValue, URLIdx: urlIdx}
 	if err := c.do(ctx, http.MethodPost, "pipelines/add", nil, form, &resp); err != nil {
 		return nil, err
 	}

@@ -8,12 +8,16 @@ import (
 )
 
 // ModelForm represents the payload for creating or updating models.
+//
+// BaseModelID carries no omitempty on purpose. Open WebUI keeps the stored
+// base_model_id whenever the key is absent from the request, so a nil pointer
+// has to reach the wire as an explicit null for removal to take effect.
 type ModelForm struct {
 	ID            string         `json:"id"`
 	Name          string         `json:"name"`
 	Meta          map[string]any `json:"meta"`
 	Params        map[string]any `json:"params"`
-	BaseModelID   *string        `json:"base_model_id,omitempty"`
+	BaseModelID   *string        `json:"base_model_id"`
 	IsActive      *bool          `json:"is_active,omitempty"`
 	AccessControl map[string]any `json:"-"`
 }

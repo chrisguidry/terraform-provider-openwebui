@@ -4,12 +4,15 @@ page_title: "openwebui_config_export Data Source - openwebui"
 subcategory: ""
 description: |-
   Exports the current Open WebUI configuration as a JSON blob. Use together with openwebui_config_import to back up and restore configuration.
+  Open WebUI v0.11.0 exports flat dotted keys, such as ui.banners and audio.stt.engine, one per stored configuration row. Open WebUI v0.9.x exported a nested tree instead, so an export taken from v0.9.x cannot be fed back into v0.11.0.
   ~> Warning: The exported JSON may contain secrets. Treat it as sensitive.
 ---
 
 # openwebui_config_export (Data Source)
 
 Exports the current Open WebUI configuration as a JSON blob. Use together with `openwebui_config_import` to back up and restore configuration.
+
+Open WebUI v0.11.0 exports flat dotted keys, such as `ui.banners` and `audio.stt.engine`, one per stored configuration row. Open WebUI v0.9.x exported a nested tree instead, so an export taken from v0.9.x cannot be fed back into v0.11.0.
 
 ~> **Warning:** The exported JSON may contain secrets. Treat it as sensitive.
 
@@ -29,4 +32,4 @@ output "config_backup" {
 
 ### Read-Only
 
-- `config_json` (String, Sensitive) Full current configuration of Open WebUI as a JSON string.
+- `config_json` (String, Sensitive) Full current configuration of Open WebUI as a JSON string of flat dotted keys.
