@@ -6,8 +6,17 @@ prompts, groups, users, channels, tools, tool servers, pipelines, functions,
 files, model connections, and every admin-level configuration surface Open WebUI
 exposes.
 
-- **Provider address:** `registry.terraform.io/docktape/openwebui`
-- **Module path:** `github.com/docktape/terraform-provider-openwebui`
+- **Provider address:** `registry.terraform.io/chrisguidry/openwebui`
+- **Source:** `github.com/chrisguidry/terraform-provider-openwebui`
+
+This is a fork of
+[docktape/terraform-provider-openwebui](https://github.com/docktape/terraform-provider-openwebui),
+which targets Open WebUI v0.9.x. The fork tracks Open WebUI v0.11,
+adds the resources that version introduced (skills, tool servers,
+terminal servers, channels, users, and the engine and identity
+configuration surfaces), and covers every backend router or documents
+why it is excluded — see API Coverage below. The original is MPL-2.0
+and so is this fork.
 
 ## Compatibility
 
