@@ -31,5 +31,20 @@ resource "openwebui_pipeline" "example" {
 ### Read-Only
 
 - `details_json` (String) JSON metadata about the pipeline as returned by Open WebUI.
-- `id` (String) Composite identifier in the form `pipeline_id:url_idx`.
+- `id` (String) Terraform identifier. Always equal to `pipeline_id`.
 - `pipeline_id` (String) Pipeline identifier assigned by the pipeline server. Set by Open WebUI.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A pipeline is imported by its pipeline_id and the index of the pipeline server
+# URL it is registered on, separated by a colon.
+terraform import openwebui_pipeline.example rate_limit_filter:0
+
+# The index defaults to 0, so a single-server install can leave it off.
+terraform import openwebui_pipeline.example rate_limit_filter
+```

@@ -49,7 +49,7 @@ data "openwebui_model" "llama" {
 - `tags` (List of String) List of tags for categorising the model.
 - `tool_ids` (List of String) List of tool IDs attached to the model by default.
 - `updated_at` (Number) Unix timestamp of when the model was last updated.
-- `user_id` (String) Owner user identifier.
+- `user_id` (String) UUID of the Open WebUI account that owns this object.
 - `write_groups` (List of String) Write-access group names.
 
 <a id="nestedatt--capabilities"></a>
@@ -84,8 +84,8 @@ Read-Only:
 - `max_tokens` (Number) Maximum number of tokens to generate.
 - `min_p` (Number) Minimum probability threshold for token sampling.
 - `mirostat` (Number) Mirostat sampling mode: 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0.
-- `mirostat_eta` (Number) Mirostat learning rate.
-- `mirostat_tau` (Number) Mirostat target entropy.
+- `mirostat_eta` (Number) Mirostat learning rate. It sets how fast the sampler reacts to the generated text.
+- `mirostat_tau` (Number) Mirostat target entropy. A lower value makes the output more focused.
 - `num_batch` (Number) Batch size for prompt processing.
 - `num_ctx` (Number) Context window size in tokens.
 - `num_gpu` (Number) Number of GPU layers to use.
@@ -100,7 +100,7 @@ Read-Only:
 - `stream_delta_chunk_size` (Number) Chunk size in tokens for streaming responses.
 - `stream_response` (Boolean) Whether to stream the response. Defaults to the base model setting.
 - `system` (String) System prompt prepended to every conversation.
-- `temperature` (Number) Sampling temperature (0–2). Lower values are more deterministic.
+- `temperature` (Number) Sampling temperature, 0 to 2. Lower values are more deterministic.
 - `tfs_z` (Number) Tail free sampling z parameter.
 - `think` (Boolean) Whether to enable chain-of-thought reasoning.
 - `top_k` (Number) Top-k sampling: number of highest-probability tokens to consider.

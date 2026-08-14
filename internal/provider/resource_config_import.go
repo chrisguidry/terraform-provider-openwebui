@@ -54,7 +54,7 @@ func (r *configImportResource) Schema(_ context.Context, _ resource.SchemaReques
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
-				Description:   "Singleton identifier, always `config_import`.",
+				Description:   "Identifier of this singleton resource. Always `config_import`.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"config_json": schema.StringAttribute{

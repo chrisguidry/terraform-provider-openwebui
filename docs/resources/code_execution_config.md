@@ -3,24 +3,31 @@
 page_title: "openwebui_code_execution_config Resource - openwebui"
 subcategory: ""
 description: |-
-  Manages code execution and code interpreter settings for Open WebUI.
+  Manages the two ways Open WebUI runs code, each with its own engine and its own Jupyter settings.
+  Code execution runs a code block a user clicks Run on. The code interpreter is the tool a model calls on its own, and it takes the extra prompt template. The code_execution_* attributes apply to the first, the code_interpreter_* attributes to the second, and Open WebUI reads each set of Jupyter attributes only when the matching engine is jupyter.
+  Open WebUI writes those four keys on every update, so this resource requires all four.
 ---
 
 # openwebui_code_execution_config (Resource)
 
-Manages code execution and code interpreter settings for Open WebUI.
+Manages the two ways Open WebUI runs code, each with its own engine and its own Jupyter settings.
+
+Code execution runs a code block a user clicks Run on. The code interpreter is the tool a model calls on its own, and it takes the extra prompt template. The `code_execution_*` attributes apply to the first, the `code_interpreter_*` attributes to the second, and Open WebUI reads each set of Jupyter attributes only when the matching engine is `jupyter`.
+
+Open WebUI writes those four keys on every update, so this resource requires all four.
 
 ## Example Usage
 
 ```terraform
 resource "openwebui_code_execution_config" "example" {
-  enable_code_execution      = true
-  code_execution_engine      = "jupyter"
-  code_execution_jupyter_url = "http://jupyter.internal:8888"
-  code_execution_jupyter_auth = "token"
+  enable_code_execution             = true
+  code_execution_engine             = "jupyter"
+  code_execution_jupyter_url        = "http://jupyter.internal:8888"
+  code_execution_jupyter_auth       = "token"
   code_execution_jupyter_auth_token = var.jupyter_token
 
-  enable_code_interpreter    = false
+  enable_code_interpreter = false
+  code_interpreter_engine = "jupyter"
 }
 
 variable "jupyter_token" {
@@ -34,10 +41,10 @@ variable "jupyter_token" {
 
 ### Required
 
-- `code_execution_engine` (String) Code execution engine type, e.g. `jupyter`.
-- `code_interpreter_engine` (String) Code interpreter engine type.
-- `enable_code_execution` (Boolean) Whether code execution via Jupyter is enabled.
-- `enable_code_interpreter` (Boolean) Whether the AI code interpreter feature is enabled.
+- `code_execution_engine` (String) Engine that runs the code, e.g. `jupyter`. Open WebUI reads the `code_execution_jupyter_*` attributes only when this is `jupyter`.
+- `code_interpreter_engine` (String) Engine that runs the code interpreter, e.g. `jupyter`. Open WebUI reads the `code_interpreter_jupyter_*` attributes only when this is `jupyter`.
+- `enable_code_execution` (Boolean) Whether a user can run a code block from a chat.
+- `enable_code_interpreter` (Boolean) Whether a model can run code on its own, as a tool, rather than waiting for a user to click Run.
 
 ### Optional
 
@@ -55,4 +62,16 @@ variable "jupyter_token" {
 
 ### Read-Only
 
-- `id` (String) Singleton identifier. Set by Open WebUI.
+- `id` (String) Identifier of this singleton resource. Always `code_execution`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Open WebUI holds one code execution configuration, so this resource is a
+# singleton. Import it under its fixed id.
+terraform import openwebui_code_execution_config.example code_execution
+```

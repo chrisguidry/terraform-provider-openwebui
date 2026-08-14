@@ -65,7 +65,7 @@ func (d *fileDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"user_id": schema.StringAttribute{
 				Computed:    true,
-				Description: "Owner user identifier.",
+				Description: "UUID of the Open WebUI account that owns this object.",
 			},
 			"data_json": schema.StringAttribute{
 				Computed:    true,

@@ -114,7 +114,7 @@ func (d *groupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 			},
 			"user_id": schema.StringAttribute{
 				Computed:    true,
-				Description: "Owner user identifier.",
+				Description: "UUID of the Open WebUI account that owns this object.",
 			},
 			"created_at": schema.StringAttribute{
 				Computed:    true,

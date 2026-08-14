@@ -56,8 +56,8 @@ func (r *evaluationConfigResource) Schema(_ context.Context, _ resource.SchemaRe
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Singleton identifier. Set by Open WebUI.",
-				MarkdownDescription: "Singleton identifier. Set by Open WebUI.",
+				Description:         "Identifier of this singleton resource. Always `evaluation`.",
+				MarkdownDescription: "Identifier of this singleton resource. Always `evaluation`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"enable_evaluation_arena_models": schema.BoolAttribute{

@@ -52,8 +52,8 @@ func (r *pipelineValvesResource) Schema(_ context.Context, _ resource.SchemaRequ
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Composite identifier in the form `pipeline_id:url_idx`.",
-				MarkdownDescription: "Composite identifier in the form `pipeline_id:url_idx`.",
+				Description:         "Terraform identifier. Always equal to `pipeline_id`.",
+				MarkdownDescription: "Terraform identifier. Always equal to `pipeline_id`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"pipeline_id": schema.StringAttribute{
@@ -68,8 +68,8 @@ func (r *pipelineValvesResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"url_idx": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "URL index of the pipeline server. Defaults to 0.",
-				MarkdownDescription: "URL index of the pipeline server. Defaults to 0.",
+				Description:         "Index of the pipeline server URL as stored by Open WebUI, matching the `url_idx` of the `openwebui_pipeline` resource. Defaults to 0.",
+				MarkdownDescription: "Index of the pipeline server URL as stored by Open WebUI, matching the `url_idx` of the `openwebui_pipeline` resource. Defaults to 0.",
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
 			},
 			"valves_json": schema.StringAttribute{

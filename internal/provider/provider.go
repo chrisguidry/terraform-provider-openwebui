@@ -45,30 +45,32 @@ func (p *openWebUIProvider) Metadata(_ context.Context, req provider.MetadataReq
 // Schema defines the provider-level schema.
 func (p *openWebUIProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "The **openwebui** provider manages resources in an [Open WebUI](https://openwebui.com) deployment via its REST API.\n\n" +
-			"## Resources\n\n" +
-			"- `openwebui_knowledge` — knowledge base entries\n" +
-			"- `openwebui_model` — custom model definitions\n" +
-			"- `openwebui_prompt` — reusable prompt commands\n" +
-			"- `openwebui_group` — user groups with permissions\n" +
-			"- `openwebui_tool` / `openwebui_tool_valves` — Python tools and their settings\n" +
-			"- `openwebui_pipeline` / `openwebui_pipeline_valves` — pipeline registrations and settings\n" +
-			"- `openwebui_file` / `openwebui_knowledge_file` — uploaded files and knowledge attachments\n" +
-			"- `openwebui_function` / `openwebui_function_valves` — Python functions and their settings\n" +
-			"- `openwebui_config_import` — bulk configuration restore\n" +
-			"- `openwebui_connections_config` — direct connection settings\n" +
-			"- `openwebui_tool_servers_config` — external tool server registrations\n" +
-			"- `openwebui_code_execution_config` — code execution and interpreter settings\n" +
-			"- `openwebui_models_config` — default model ordering settings\n" +
-			"- `openwebui_suggestions_config` — default prompt suggestions\n" +
-			"- `openwebui_banners_config` — UI announcement banners\n" +
-			"- `openwebui_oauth_client` — OAuth client registrations\n\n" +
-			"## Data Sources\n\n" +
-			"- `openwebui_model`, `openwebui_knowledge`, `openwebui_prompt`, `openwebui_group`, `openwebui_tool`, `openwebui_pipeline` — look up existing objects by name or ID\n" +
-			"- `openwebui_file`, `openwebui_files` — look up uploaded files\n" +
-			"- `openwebui_config_export` — export the current Open WebUI configuration\n" +
-			"- `openwebui_user` — look up a user by email or ID\n" +
-			"- `openwebui_tool_server_verify` — verify connectivity to a tool server\n",
+		MarkdownDescription: "The **openwebui** provider manages an [Open WebUI](https://openwebui.com) deployment through its REST API. " +
+			"It covers Open WebUI v0.11.\n\n" +
+			"## Configuration\n\n" +
+			"The provider needs the base URL of the instance and an API token from an administrator account. " +
+			"Set them in the provider block, or leave them out and set `OPENWEBUI_ENDPOINT` and `OPENWEBUI_TOKEN` in the environment. " +
+			"The token is the API key on the Account page of the Open WebUI settings. An administrator token is required, " +
+			"because the configuration resources read and write the admin API.\n\n" +
+			"## What the provider manages\n\n" +
+			"The navigation lists every resource and data source. They fall into four groups.\n\n" +
+			"**Content**: `openwebui_knowledge` and `openwebui_knowledge_file`, `openwebui_file`, `openwebui_model`, " +
+			"`openwebui_prompt`, `openwebui_skill`, `openwebui_tool`, `openwebui_function`, `openwebui_pipeline`, and the " +
+			"`_valves` resources that carry the settings of a tool, a function, or a pipeline.\n\n" +
+			"**People and access**: `openwebui_user`, `openwebui_group`, `openwebui_channel`, and " +
+			"`openwebui_default_user_permissions` for what a new account may do.\n\n" +
+			"**Instance configuration**: one resource for each page of the admin settings, including `openwebui_admin_config`, " +
+			"`openwebui_chat_config`, `openwebui_audio_config`, `openwebui_images_config`, `openwebui_rag_config`, " +
+			"`openwebui_rag_embedding_config`, `openwebui_code_execution_config`, `openwebui_task_config`, " +
+			"`openwebui_subagents_config`, `openwebui_evaluation_config`, `openwebui_ldap_config`, `openwebui_banners_config`, " +
+			"`openwebui_suggestions_config`, and `openwebui_models_config`. Each one is a singleton: the instance holds a " +
+			"single copy of those settings, so declare the resource once. `openwebui_config_export` reads the whole " +
+			"configuration back, and `openwebui_config_import` restores one.\n\n" +
+			"**Backends**: `openwebui_ollama_connections` and `openwebui_openai_connections` for model endpoints, " +
+			"`openwebui_tool_server` and `openwebui_terminal_server` for external servers, and `openwebui_oauth_client` for " +
+			"the credentials they authenticate with. `openwebui_tool_servers_config` writes the whole tool server list at " +
+			"once, and `openwebui_connections_config` carries the direct-connection settings. The `_verify` data sources ask " +
+			"Open WebUI to connect to an endpoint, and the read fails when it cannot.\n",
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -81,7 +83,7 @@ func (p *openWebUIProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 			},
 			"insecure_skip_verify": schema.BoolAttribute{
 				Optional:    true,
-				Description: "Disable TLS certificate verification. **Not recommended for production use.** Can also be set via the `OPENWEBUI_INSECURE` environment variable.",
+				Description: "Disable TLS certificate verification. **Not recommended for production use.** Can also be set via the `OPENWEBUI_INSECURE` environment variable, where any non-empty value disables verification.",
 			},
 		},
 	}

@@ -13,6 +13,12 @@ Configures the Valves (settings) of an Open WebUI pipeline.
 ## Example Usage
 
 ```terraform
+resource "openwebui_pipeline" "example" {
+  url = "http://pipelines.internal:9099"
+}
+
+# A pipeline is identified by its id and the index of the server URL it is
+# registered on, so the valves name both.
 resource "openwebui_pipeline_valves" "example" {
   pipeline_id = openwebui_pipeline.example.pipeline_id
   url_idx     = openwebui_pipeline.example.url_idx
@@ -32,10 +38,22 @@ resource "openwebui_pipeline_valves" "example" {
 
 ### Optional
 
-- `url_idx` (Number) URL index of the pipeline server. Defaults to 0.
+- `url_idx` (Number) Index of the pipeline server URL as stored by Open WebUI, matching the `url_idx` of the `openwebui_pipeline` resource. Defaults to 0.
 - `valves_json` (String) JSON object of valve values to apply to the pipeline. e.g. `jsonencode({ temperature = 0.7 })`.
 
 ### Read-Only
 
-- `id` (String) Composite identifier in the form `pipeline_id:url_idx`.
+- `id` (String) Terraform identifier. Always equal to `pipeline_id`.
 - `spec_json` (String) JSON schema of the pipeline's Valves class. Read-only; returned by Open WebUI.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Valves belong to a pipeline, so the import id is the pipeline_id and the index
+# of the pipeline server URL, separated by a colon.
+terraform import openwebui_pipeline_valves.example rate_limit_filter:0
+```

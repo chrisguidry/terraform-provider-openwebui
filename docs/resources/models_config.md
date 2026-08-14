@@ -3,16 +3,22 @@
 page_title: "openwebui_models_config Resource - openwebui"
 subcategory: ""
 description: |-
-  Manages default model ordering and pinning settings for Open WebUI.
+  Manages the model list every user starts from: which models a new chat opens with, which ones sit pinned at the top, the order the picker shows them in, and the default metadata and parameters.
+  POST /api/v1/configs/models writes all five keys of the form it receives, so an attribute this configuration leaves out is written as null and the stored value is lost. The two JSON attributes are the exception: the provider reads them back and carries them across a write that does not name them.
 ---
 
 # openwebui_models_config (Resource)
 
-Manages default model ordering and pinning settings for Open WebUI.
+Manages the model list every user starts from: which models a new chat opens with, which ones sit pinned at the top, the order the picker shows them in, and the default metadata and parameters.
+
+`POST /api/v1/configs/models` writes all five keys of the form it receives, so an attribute this configuration leaves out is written as null and the stored value is lost. The two JSON attributes are the exception: the provider reads them back and carries them across a write that does not name them.
 
 ## Example Usage
 
 ```terraform
+# Open WebUI writes all five settings on every update, so name every one you
+# care about. An attribute left out is written as null and its stored value is
+# lost.
 resource "openwebui_models_config" "example" {
   default_models        = "llama3.2"
   default_pinned_models = "llama3.2,gpt-4o"
@@ -27,10 +33,22 @@ resource "openwebui_models_config" "example" {
 
 - `default_model_metadata_json` (String) Default model metadata as a JSON object. Open WebUI stores it under `models.default_metadata`.
 - `default_model_params_json` (String) Default model parameters as a JSON object. Open WebUI stores it under `models.default_params`.
-- `default_models` (String) Comma-separated list of model IDs shown by default.
-- `default_pinned_models` (String) Comma-separated list of model IDs pinned at the top of the model list.
-- `model_order_list` (List of String) Ordered list of model IDs controlling display order.
+- `default_models` (String) Comma-separated model IDs a new chat opens with. Stored as `DEFAULT_MODELS`.
+- `default_pinned_models` (String) Comma-separated model IDs pinned to the top of the model picker. Stored as `DEFAULT_PINNED_MODELS`.
+- `model_order_list` (List of String) Model IDs in the order the picker lists them. Stored as `MODEL_ORDER_LIST`.
 
 ### Read-Only
 
-- `id` (String) Singleton identifier. Set by Open WebUI.
+- `id` (String) Identifier of this singleton resource. Always `models`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# The default model list is one configuration block, so this resource is a
+# singleton. Import it under its fixed id.
+terraform import openwebui_models_config.example models
+```

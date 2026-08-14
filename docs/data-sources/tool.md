@@ -14,7 +14,7 @@ Looks up an existing tool by its `tool_id`.
 
 ```terraform
 data "openwebui_tool" "scraper" {
-  name = "Web Scraper"
+  tool_id = "web_scraper"
 }
 ```
 
@@ -32,13 +32,13 @@ data "openwebui_tool" "scraper" {
 - `description` (String) Short description of the tool.
 - `has_user_valves` (Boolean) Whether the tool source declares a `UserValves` class.
 - `id` (String) UUID assigned by Open WebUI.
-- `manifest_json` (String) JSON manifest derived from the tool's frontmatter.
+- `manifest_json` (String) JSON manifest stored under the tool's `meta.manifest`.
 - `name` (String) Display name of the tool.
 - `public_read` (Boolean) Whether every signed-in user can read the tool.
 - `public_write` (Boolean) Whether every signed-in user can edit the tool.
 - `read_groups` (List of String) Read-access group names currently applied to this tool.
 - `specs_json` (String) JSON OpenAPI-style specification of the tool's functions.
 - `updated_at` (Number) Unix timestamp of last update.
-- `user_id` (String) Owner user identifier.
+- `user_id` (String) UUID of the Open WebUI account that owns this object.
 - `write_access` (Boolean) Whether the authenticated user has write access.
 - `write_groups` (List of String) Write-access group names currently applied to this tool.

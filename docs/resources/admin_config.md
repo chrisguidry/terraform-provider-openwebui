@@ -76,4 +76,16 @@ resource "openwebui_admin_config" "example" {
 
 ### Read-Only
 
-- `id` (String) Singleton identifier. Set by Open WebUI.
+- `id` (String) Identifier of this singleton resource. Always `admin`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Open WebUI holds one set of admin settings, so this resource is a singleton.
+# Import it under its fixed id.
+terraform import openwebui_admin_config.example admin
+```

@@ -63,18 +63,17 @@ func (r *taskConfigResource) Metadata(_ context.Context, req resource.MetadataRe
 
 // Schema defines the task config schema.
 func (r *taskConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	const templateNote = " Set it to an empty string to use the template built into Open WebUI."
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages the task settings for Open WebUI: the model that runs background tasks and the prompt templates for " +
 			"chat titles, tags, autocomplete, search queries, follow ups, tool calling, and voice mode. " +
-			"Open WebUI writes all eighteen settings on every update, so every attribute of this resource is required. " +
+			"Open WebUI writes all eighteen settings on every update, and rejects a request that omits one, so this resource sends all eighteen every time. " +
+			"Fifteen are required here. The other three are nullable in Open WebUI, so they are optional, and the provider sends null when they are unset.\n\n" +
 			"An empty template string is a real value that means \"use the template built into Open WebUI\".",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Singleton identifier. Set by Open WebUI.",
-				MarkdownDescription: "Singleton identifier. Set by Open WebUI.",
+				Description:         "Identifier of this singleton resource. Always `task_config`.",
+				MarkdownDescription: "Identifier of this singleton resource. Always `task_config`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"task_model": schema.StringAttribute{
@@ -94,13 +93,13 @@ func (r *taskConfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			},
 			"title_generation_prompt_template": schema.StringAttribute{
 				Required:            true,
-				Description:         "Prompt template for chat titles." + templateNote,
-				MarkdownDescription: "Prompt template for chat titles." + templateNote,
+				Description:         "Prompt template for chat titles.",
+				MarkdownDescription: "Prompt template for chat titles.",
 			},
 			"image_prompt_generation_prompt_template": schema.StringAttribute{
 				Required:            true,
-				Description:         "Prompt template that turns a chat into an image generation prompt." + templateNote,
-				MarkdownDescription: "Prompt template that turns a chat into an image generation prompt." + templateNote,
+				Description:         "Prompt template that turns a chat into an image generation prompt.",
+				MarkdownDescription: "Prompt template that turns a chat into an image generation prompt.",
 			},
 			"enable_autocomplete_generation": schema.BoolAttribute{
 				Required:            true,
@@ -114,18 +113,18 @@ func (r *taskConfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			},
 			"autocomplete_generation_prompt_template": schema.StringAttribute{
 				Required:            true,
-				Description:         "Prompt template for autocompletion." + templateNote,
-				MarkdownDescription: "Prompt template for autocompletion." + templateNote,
+				Description:         "Prompt template for autocompletion.",
+				MarkdownDescription: "Prompt template for autocompletion.",
 			},
 			"tags_generation_prompt_template": schema.StringAttribute{
 				Required:            true,
-				Description:         "Prompt template for chat tags." + templateNote,
-				MarkdownDescription: "Prompt template for chat tags." + templateNote,
+				Description:         "Prompt template for chat tags.",
+				MarkdownDescription: "Prompt template for chat tags.",
 			},
 			"follow_up_generation_prompt_template": schema.StringAttribute{
 				Required:            true,
-				Description:         "Prompt template for follow-up suggestions." + templateNote,
-				MarkdownDescription: "Prompt template for follow-up suggestions." + templateNote,
+				Description:         "Prompt template for follow-up suggestions.",
+				MarkdownDescription: "Prompt template for follow-up suggestions.",
 			},
 			"enable_follow_up_generation": schema.BoolAttribute{
 				Required:            true,
@@ -149,13 +148,13 @@ func (r *taskConfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			},
 			"query_generation_prompt_template": schema.StringAttribute{
 				Required:            true,
-				Description:         "Prompt template for search and retrieval queries." + templateNote,
-				MarkdownDescription: "Prompt template for search and retrieval queries." + templateNote,
+				Description:         "Prompt template for search and retrieval queries.",
+				MarkdownDescription: "Prompt template for search and retrieval queries.",
 			},
 			"tools_function_calling_prompt_template": schema.StringAttribute{
 				Required:            true,
-				Description:         "Prompt template that asks a model without native tool calling to pick a tool." + templateNote,
-				MarkdownDescription: "Prompt template that asks a model without native tool calling to pick a tool." + templateNote,
+				Description:         "Prompt template that asks a model without native tool calling to pick a tool.",
+				MarkdownDescription: "Prompt template that asks a model without native tool calling to pick a tool.",
 			},
 			"enable_voice_mode_prompt": schema.BoolAttribute{
 				Required:            true,
@@ -164,8 +163,8 @@ func (r *taskConfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			},
 			"voice_mode_prompt_template": schema.StringAttribute{
 				Optional:            true,
-				Description:         "Prompt template for voice mode." + templateNote,
-				MarkdownDescription: "Prompt template for voice mode." + templateNote,
+				Description:         "Prompt template for voice mode. Unlike the other templates this one is nullable: left unset, the provider sends null rather than the empty string.",
+				MarkdownDescription: "Prompt template for voice mode. Unlike the other templates this one is nullable: left unset, the provider sends null rather than the empty string.",
 			},
 		},
 	}

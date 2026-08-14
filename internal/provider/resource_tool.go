@@ -63,8 +63,8 @@ func (r *toolResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "UUID assigned by Open WebUI on create.",
-				MarkdownDescription: "UUID assigned by Open WebUI on create.",
+				Description:         "Terraform identifier. Always equal to `tool_id`.",
+				MarkdownDescription: "Terraform identifier. Always equal to `tool_id`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"tool_id": schema.StringAttribute{
@@ -96,8 +96,8 @@ func (r *toolResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"manifest_json": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "JSON manifest derived from the source frontmatter. Read-only; set by Open WebUI.",
-				MarkdownDescription: "JSON manifest derived from the source frontmatter. Read-only; set by Open WebUI.",
+				Description:         "JSON manifest stored under the tool's meta.manifest, e.g. jsonencode({ author = \"ops\", version = \"1.0\" }). The web editor fills it from the frontmatter of the source. This resource sends whatever the configuration holds. Leave it unset to keep the manifest Open WebUI already stores.",
+				MarkdownDescription: "JSON manifest stored under the tool's `meta.manifest`, e.g. `jsonencode({ author = \"ops\", version = \"1.0\" })`. The web editor fills it from the frontmatter of `content`. This resource sends whatever the configuration holds. Leave it unset to keep the manifest Open WebUI already stores.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"read_groups": schema.ListAttribute{

@@ -64,8 +64,8 @@ func (r *defaultUserPermissionsResource) Schema(_ context.Context, _ resource.Sc
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Singleton identifier. Set by Open WebUI.",
-				MarkdownDescription: "Singleton identifier. Set by Open WebUI.",
+				Description:         "Identifier of this singleton resource. Always `default_user_permissions`.",
+				MarkdownDescription: "Identifier of this singleton resource. Always `default_user_permissions`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"permissions": schema.SingleNestedAttribute{

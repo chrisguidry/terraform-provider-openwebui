@@ -54,11 +54,11 @@ func (r *functionResource) Metadata(_ context.Context, req resource.MetadataRequ
 // Schema defines the function resource schema.
 func (r *functionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages an Open WebUI function — a Pipe, Filter, or Action plugin written in Python.\n\nThe `type` and `manifest_json` are derived by Open WebUI from the Python source you provide and are read-only. The class you define (`Pipe`, `Filter`, or `Action`) determines the type.",
+		MarkdownDescription: "Manages an Open WebUI function, which is a Pipe, Filter, or Action plugin written in Python.\n\nOpen WebUI derives `type` and `manifest_json` from the Python source you provide, so both are read-only. The class you define, `Pipe`, `Filter`, or `Action`, sets the type.\n\nA function reads its settings from `openwebui_function_valves`, a separate resource, so changing a setting does not rewrite the source.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
-				Description:   "Mirrors `function_id`.",
+				Description:   "Terraform identifier. Always equal to `function_id`.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"function_id": schema.StringAttribute{

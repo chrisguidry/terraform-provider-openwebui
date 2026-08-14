@@ -54,7 +54,7 @@ func (r *oauthClientResource) Schema(_ context.Context, _ resource.SchemaRequest
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
-				Description:   "Mirrors `client_id`.",
+				Description:   "Terraform identifier. Always equal to `client_id`.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"url": schema.StringAttribute{

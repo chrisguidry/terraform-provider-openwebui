@@ -46,3 +46,15 @@ resource "openwebui_knowledge_file" "example" {
 
 - `file_json` (String) JSON metadata for the attached file as returned by Open WebUI: identifiers, filename, hash, size, and timestamps. The knowledge file listing never carries the file's extracted content.
 - `id` (String) Composite identifier in the form `knowledge_id:file_id`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# The attachment of a file to a knowledge base has no identifier of its own, so
+# the import id names both sides, separated by a colon.
+terraform import openwebui_knowledge_file.example 7a1b2c3d-4e5f-4061-8273-9a0b1c2d3e4f:3b2d5c7a-1e4f-4b8c-9d0a-6f5e4d3c2b1a
+```

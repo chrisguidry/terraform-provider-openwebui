@@ -58,8 +58,8 @@ func (r *chatConfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Singleton identifier. Set by Open WebUI.",
-				MarkdownDescription: "Singleton identifier. Set by Open WebUI.",
+				Description:         "Identifier of this singleton resource. Always `chat`.",
+				MarkdownDescription: "Identifier of this singleton resource. Always `chat`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"context_compaction_model": schema.StringAttribute{

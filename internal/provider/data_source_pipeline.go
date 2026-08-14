@@ -56,13 +56,13 @@ func (d *pipelineDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"url_idx": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "URL index of the pipeline. Defaults to 0.",
-				MarkdownDescription: "URL index of the pipeline. Defaults to 0.",
+				Description:         "Index of the pipeline server URL as stored by Open WebUI. Defaults to 0.",
+				MarkdownDescription: "Index of the pipeline server URL as stored by Open WebUI. Defaults to 0.",
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Composite identifier in the form `pipeline_id:url_idx`.",
-				MarkdownDescription: "Composite identifier in the form `pipeline_id:url_idx`.",
+				Description:         "Terraform identifier. Always equal to `pipeline_id`.",
+				MarkdownDescription: "Terraform identifier. Always equal to `pipeline_id`.",
 			},
 			"details_json": schema.StringAttribute{
 				Computed:            true,

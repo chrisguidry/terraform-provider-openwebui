@@ -29,8 +29,8 @@ resource "openwebui_file" "example" {
 ### Optional
 
 - `metadata_json` (String) Optional JSON metadata to attach to the file on upload. e.g. `jsonencode({ category = "docs" })`. Forces replacement.
-- `process` (Boolean) Whether Open WebUI should process the file for RAG (chunk and embed it). Defaults to `false`.
-- `process_in_background` (Boolean) Whether RAG processing runs asynchronously. Only relevant when `process = true`. Defaults to `false`.
+- `process` (Boolean) Whether Open WebUI should process the file for RAG (chunk and embed it). Defaults to `false`. Forces replacement.
+- `process_in_background` (Boolean) Whether RAG processing runs asynchronously. Only relevant when `process = true`. Defaults to `false`. Forces replacement.
 
 ### Read-Only
 
@@ -42,3 +42,16 @@ resource "openwebui_file" "example" {
 - `meta_json` (String) JSON metadata blob associated with the file as returned by Open WebUI.
 - `updated_at` (Number) Unix timestamp of when the file record was last updated. Set by Open WebUI.
 - `user_id` (String) Owner user identifier. Set by Open WebUI.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A file is imported by the UUID Open WebUI assigned it on upload. Open WebUI
+# never returns the local path, so source_path stays empty in state and the
+# first plan after the import replaces the file by uploading it again.
+terraform import openwebui_file.example 3b2d5c7a-1e4f-4b8c-9d0a-6f5e4d3c2b1a
+```

@@ -61,3 +61,13 @@ resource "openwebui_tool_server" "invoices" {
   oauth_client_secret = var.invoices_oauth_client_secret
   oauth_client_info   = openwebui_oauth_client.invoices.oauth_client_info
 }
+
+variable "billing_tool_token" {
+  type      = string
+  sensitive = true
+}
+
+variable "invoices_oauth_client_secret" {
+  type      = string
+  sensitive = true
+}

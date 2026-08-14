@@ -55,8 +55,8 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Composite identifier in the form `pipeline_id:url_idx`.",
-				MarkdownDescription: "Composite identifier in the form `pipeline_id:url_idx`.",
+				Description:         "Terraform identifier. Always equal to `pipeline_id`.",
+				MarkdownDescription: "Terraform identifier. Always equal to `pipeline_id`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"pipeline_id": schema.StringAttribute{

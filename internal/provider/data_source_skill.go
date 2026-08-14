@@ -108,13 +108,13 @@ func (d *skillDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 			},
 			"public_write": schema.BoolAttribute{
 				Computed:            true,
-				Description:         "Whether every signed-in user can write the skill.",
-				MarkdownDescription: "Whether every signed-in user can write the skill.",
+				Description:         "Whether every signed-in user can edit the skill.",
+				MarkdownDescription: "Whether every signed-in user can edit the skill.",
 			},
 			"user_id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Owner user identifier.",
-				MarkdownDescription: "Owner user identifier.",
+				Description:         "UUID of the Open WebUI account that owns this object.",
+				MarkdownDescription: "UUID of the Open WebUI account that owns this object.",
 			},
 			"created_at": schema.Int64Attribute{
 				Computed:            true,

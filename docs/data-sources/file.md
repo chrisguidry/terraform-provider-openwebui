@@ -14,7 +14,7 @@ Looks up an uploaded file by its UUID.
 
 ```terraform
 data "openwebui_file" "doc" {
-  id = "abc12345-0000-0000-0000-000000000000"
+  file_id = "3b2d5c7a-1e4f-4b8c-9d0a-6f5e4d3c2b1a"
 }
 ```
 
@@ -34,4 +34,4 @@ data "openwebui_file" "doc" {
 - `id` (String) UUID of the file. Set after lookup.
 - `meta_json` (String) JSON metadata blob associated with the file as returned by Open WebUI.
 - `updated_at` (Number) Unix timestamp of when the file record was last updated.
-- `user_id` (String) Owner user identifier.
+- `user_id` (String) UUID of the Open WebUI account that owns this object.

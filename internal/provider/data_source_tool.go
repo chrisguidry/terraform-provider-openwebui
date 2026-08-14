@@ -81,8 +81,8 @@ func (d *toolDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"manifest_json": schema.StringAttribute{
 				Computed:            true,
-				Description:         "JSON manifest derived from the tool's frontmatter.",
-				MarkdownDescription: "JSON manifest derived from the tool's frontmatter.",
+				Description:         "JSON manifest stored under the tool's meta.manifest.",
+				MarkdownDescription: "JSON manifest stored under the tool's `meta.manifest`.",
 			},
 			"read_groups": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -113,8 +113,8 @@ func (d *toolDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"user_id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Owner user identifier.",
-				MarkdownDescription: "Owner user identifier.",
+				Description:         "UUID of the Open WebUI account that owns this object.",
+				MarkdownDescription: "UUID of the Open WebUI account that owns this object.",
 			},
 			"created_at": schema.Int64Attribute{
 				Computed:            true,

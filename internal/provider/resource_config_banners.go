@@ -52,12 +52,12 @@ func (r *bannersConfigResource) Metadata(_ context.Context, req resource.Metadat
 // Schema defines the banners config schema.
 func (r *bannersConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages UI announcement banners displayed to all Open WebUI users.",
+		MarkdownDescription: "Manages the announcement banners Open WebUI shows above the chat to every user.\n\nThis resource owns the whole list. Each write replaces it, so a banner added in the web UI is removed on the next apply, and taking a banner out of `banners` is how you retire it.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Singleton identifier. Set by Open WebUI.",
-				MarkdownDescription: "Singleton identifier. Set by Open WebUI.",
+				Description:         "Identifier of this singleton resource. Always `banners`.",
+				MarkdownDescription: "Identifier of this singleton resource. Always `banners`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"banners": schema.ListNestedAttribute{
@@ -68,8 +68,8 @@ func (r *bannersConfigResource) Schema(_ context.Context, _ resource.SchemaReque
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							Required:            true,
-							Description:         "Unique identifier for this banner.",
-							MarkdownDescription: "Unique identifier for this banner.",
+							Description:         "Identifier of this banner, unique within the list. You choose it, Open WebUI does not.",
+							MarkdownDescription: "Identifier of this banner, unique within the list. You choose it, Open WebUI does not.",
 						},
 						"type": schema.StringAttribute{
 							Required:            true,
@@ -94,8 +94,8 @@ func (r *bannersConfigResource) Schema(_ context.Context, _ resource.SchemaReque
 						},
 						"timestamp": schema.Int64Attribute{
 							Required:            true,
-							Description:         "Unix timestamp used for ordering banners.",
-							MarkdownDescription: "Unix timestamp used for ordering banners.",
+							Description:         "Unix timestamp stored with the banner, in seconds. Any integer is accepted.",
+							MarkdownDescription: "Unix timestamp stored with the banner, in seconds. Any integer is accepted.",
 							PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
 						},
 					},

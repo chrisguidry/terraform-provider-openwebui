@@ -13,6 +13,14 @@ Configures the Valves (settings) of an Open WebUI function.
 ## Example Usage
 
 ```terraform
+resource "openwebui_function" "example" {
+  function_id = "content_filter"
+  name        = "Content Filter"
+  content     = file("${path.module}/functions/content_filter.py")
+}
+
+# Valves are the settings the function reads at run time. They live apart from
+# the function, so changing one does not rewrite the code.
 resource "openwebui_function_valves" "example" {
   function_id = openwebui_function.example.id
 
@@ -35,5 +43,16 @@ resource "openwebui_function_valves" "example" {
 
 ### Read-Only
 
-- `id` (String) Mirrors `function_id`.
+- `id` (String) Terraform identifier. Always equal to `function_id`.
 - `spec_json` (String) JSON schema of the function's Valves class. Read-only; returned by Open WebUI.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Valves belong to a function, so the import id is the function_id.
+terraform import openwebui_function_valves.example content_filter
+```

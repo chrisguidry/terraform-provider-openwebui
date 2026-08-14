@@ -61,8 +61,8 @@ func (d *toolServerDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Mirrors `server_id`.",
-				MarkdownDescription: "Mirrors `server_id`.",
+				Description:         "Terraform identifier. Always equal to `server_id`.",
+				MarkdownDescription: "Terraform identifier. Always equal to `server_id`.",
 			},
 			"server_id": schema.StringAttribute{
 				Required:            true,

@@ -65,7 +65,7 @@ func (r *groupResource) Metadata(_ context.Context, req resource.MetadataRequest
 // Schema defines the resource schema for groups.
 func (r *groupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a user group in Open WebUI. Groups control workspace and chat permissions and are used for resource access control.",
+		MarkdownDescription: "Manages a user group in Open WebUI. A group carries a set of permissions for its members, and the `read_groups` and `write_groups` attributes of the other resources name groups to share a model, a prompt, a tool, or a knowledge base with.\n\nThis resource owns the membership list. There is no route that sets a user's groups from the user's side, so name every member in `users`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -90,7 +90,7 @@ func (r *groupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"permissions": schema.SingleNestedAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Optional permission overrides for group members. Omit to use Open WebUI defaults.",
+				MarkdownDescription: "Permission overrides for group members. Omit a category, or a key inside one, to leave it at the default from `openwebui_default_user_permissions`. Open WebUI stores group permissions as a free-form object, so a key this provider build does not know is still sent, with a warning.",
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
 				},

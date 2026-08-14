@@ -49,34 +49,34 @@ func (r *modelsConfigResource) Metadata(_ context.Context, req resource.Metadata
 // Schema defines the models config schema.
 func (r *modelsConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages default model ordering and pinning settings for Open WebUI.",
+		MarkdownDescription: "Manages the model list every user starts from: which models a new chat opens with, which ones sit pinned at the top, the order the picker shows them in, and the default metadata and parameters.\n\n`POST /api/v1/configs/models` writes all five keys of the form it receives, so an attribute this configuration leaves out is written as null and the stored value is lost. The two JSON attributes are the exception: the provider reads them back and carries them across a write that does not name them.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Singleton identifier. Set by Open WebUI.",
-				MarkdownDescription: "Singleton identifier. Set by Open WebUI.",
+				Description:         "Identifier of this singleton resource. Always `models`.",
+				MarkdownDescription: "Identifier of this singleton resource. Always `models`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"default_models": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Comma-separated list of model IDs shown by default.",
-				MarkdownDescription: "Comma-separated list of model IDs shown by default.",
+				Description:         "Comma-separated model IDs a new chat opens with. Stored as `DEFAULT_MODELS`.",
+				MarkdownDescription: "Comma-separated model IDs a new chat opens with. Stored as `DEFAULT_MODELS`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"default_pinned_models": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Comma-separated list of model IDs pinned at the top of the model list.",
-				MarkdownDescription: "Comma-separated list of model IDs pinned at the top of the model list.",
+				Description:         "Comma-separated model IDs pinned to the top of the model picker. Stored as `DEFAULT_PINNED_MODELS`.",
+				MarkdownDescription: "Comma-separated model IDs pinned to the top of the model picker. Stored as `DEFAULT_PINNED_MODELS`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"model_order_list": schema.ListAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "Ordered list of model IDs controlling display order.",
-				MarkdownDescription: "Ordered list of model IDs controlling display order.",
+				Description:         "Model IDs in the order the picker lists them. Stored as `MODEL_ORDER_LIST`.",
+				MarkdownDescription: "Model IDs in the order the picker lists them. Stored as `MODEL_ORDER_LIST`.",
 				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"default_model_metadata_json": schema.StringAttribute{

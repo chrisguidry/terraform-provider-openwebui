@@ -57,24 +57,24 @@ func (r *codeExecutionConfigResource) Metadata(_ context.Context, req resource.M
 // Schema defines the code execution config schema.
 func (r *codeExecutionConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages code execution and code interpreter settings for Open WebUI.",
+		MarkdownDescription: "Manages the two ways Open WebUI runs code, each with its own engine and its own Jupyter settings.\n\nCode execution runs a code block a user clicks Run on. The code interpreter is the tool a model calls on its own, and it takes the extra prompt template. The `code_execution_*` attributes apply to the first, the `code_interpreter_*` attributes to the second, and Open WebUI reads each set of Jupyter attributes only when the matching engine is `jupyter`.\n\nOpen WebUI writes those four keys on every update, so this resource requires all four.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Singleton identifier. Set by Open WebUI.",
-				MarkdownDescription: "Singleton identifier. Set by Open WebUI.",
+				Description:         "Identifier of this singleton resource. Always `code_execution`.",
+				MarkdownDescription: "Identifier of this singleton resource. Always `code_execution`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"enable_code_execution": schema.BoolAttribute{
 				Required:            true,
-				Description:         "Whether code execution via Jupyter is enabled.",
-				MarkdownDescription: "Whether code execution via Jupyter is enabled.",
+				Description:         "Whether a user can run a code block from a chat.",
+				MarkdownDescription: "Whether a user can run a code block from a chat.",
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"code_execution_engine": schema.StringAttribute{
 				Required:            true,
-				Description:         "Code execution engine type, e.g. `jupyter`.",
-				MarkdownDescription: "Code execution engine type, e.g. `jupyter`.",
+				Description:         "Engine that runs the code, e.g. `jupyter`. Open WebUI reads the `code_execution_jupyter_*` attributes only when this is `jupyter`.",
+				MarkdownDescription: "Engine that runs the code, e.g. `jupyter`. Open WebUI reads the `code_execution_jupyter_*` attributes only when this is `jupyter`.",
 			},
 			"code_execution_jupyter_url": schema.StringAttribute{
 				Optional:            true,
@@ -115,14 +115,14 @@ func (r *codeExecutionConfigResource) Schema(_ context.Context, _ resource.Schem
 			},
 			"enable_code_interpreter": schema.BoolAttribute{
 				Required:            true,
-				Description:         "Whether the AI code interpreter feature is enabled.",
-				MarkdownDescription: "Whether the AI code interpreter feature is enabled.",
+				Description:         "Whether a model can run code on its own, as a tool, rather than waiting for a user to click Run.",
+				MarkdownDescription: "Whether a model can run code on its own, as a tool, rather than waiting for a user to click Run.",
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"code_interpreter_engine": schema.StringAttribute{
 				Required:            true,
-				Description:         "Code interpreter engine type.",
-				MarkdownDescription: "Code interpreter engine type.",
+				Description:         "Engine that runs the code interpreter, e.g. `jupyter`. Open WebUI reads the `code_interpreter_jupyter_*` attributes only when this is `jupyter`.",
+				MarkdownDescription: "Engine that runs the code interpreter, e.g. `jupyter`. Open WebUI reads the `code_interpreter_jupyter_*` attributes only when this is `jupyter`.",
 			},
 			"code_interpreter_prompt_template": schema.StringAttribute{
 				Optional:            true,

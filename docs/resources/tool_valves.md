@@ -13,6 +13,14 @@ Configures the Valves (settings) of an Open WebUI tool. Valves are the tool's us
 ## Example Usage
 
 ```terraform
+resource "openwebui_tool" "example" {
+  tool_id = "web_scraper"
+  name    = "Web Scraper"
+  content = file("${path.module}/tools/web_scraper.py")
+}
+
+# Valves are the settings the tool reads at run time. They live apart from the
+# tool, so changing one does not rewrite the code.
 resource "openwebui_tool_valves" "example" {
   tool_id = openwebui_tool.example.id
 
@@ -36,5 +44,16 @@ resource "openwebui_tool_valves" "example" {
 
 ### Read-Only
 
-- `id` (String) Mirrors `tool_id`.
+- `id` (String) Terraform identifier. Always equal to `tool_id`.
 - `spec_json` (String) JSON schema specification of the tool's Valves class. Read-only; returned by Open WebUI.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Valves belong to a tool, so the import id is the tool_id.
+terraform import openwebui_tool_valves.example web_scraper
+```

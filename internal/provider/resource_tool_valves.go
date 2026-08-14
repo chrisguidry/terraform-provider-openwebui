@@ -48,8 +48,8 @@ func (r *toolValvesResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Mirrors `tool_id`.",
-				MarkdownDescription: "Mirrors `tool_id`.",
+				Description:         "Terraform identifier. Always equal to `tool_id`.",
+				MarkdownDescription: "Terraform identifier. Always equal to `tool_id`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"tool_id": schema.StringAttribute{

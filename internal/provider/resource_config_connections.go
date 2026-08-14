@@ -43,21 +43,21 @@ func (r *connectionsConfigResource) Metadata(_ context.Context, req resource.Met
 // Schema defines the connections config schema.
 func (r *connectionsConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages connection settings for Open WebUI. This is a singleton resource that updates global connection configuration.",
+		MarkdownDescription: "Manages the two instance-wide connection switches of Open WebUI, `ENABLE_DIRECT_CONNECTIONS` and `ENABLE_BASE_MODELS_CACHE`.\n\n`POST /api/v1/configs/connections` writes both keys on every request, so both attributes are required. The model endpoints themselves live in `openwebui_ollama_connections` and `openwebui_openai_connections`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
-				Description:   "Singleton identifier. Set by Open WebUI.",
+				Description:   "Identifier of this singleton resource. Always `connections`.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"enable_direct_connections": schema.BoolAttribute{
 				Required:      true,
-				Description:   "Whether direct model connections from the browser are allowed.",
+				Description:   "Whether a user may add their own model endpoint under Settings, which their browser then calls directly. Stored as `ENABLE_DIRECT_CONNECTIONS`.",
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"enable_base_models_cache": schema.BoolAttribute{
 				Required:      true,
-				Description:   "Whether base model lists are cached for performance.",
+				Description:   "Whether Open WebUI caches the model list each backend returns, rather than asking every backend again on each request. Stored as `ENABLE_BASE_MODELS_CACHE`.",
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 		},

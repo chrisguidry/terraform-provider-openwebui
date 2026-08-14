@@ -3,12 +3,15 @@
 page_title: "openwebui_group Resource - openwebui"
 subcategory: ""
 description: |-
-  Manages a user group in Open WebUI. Groups control workspace and chat permissions and are used for resource access control.
+  Manages a user group in Open WebUI. A group carries a set of permissions for its members, and the read_groups and write_groups attributes of the other resources name groups to share a model, a prompt, a tool, or a knowledge base with.
+  This resource owns the membership list. There is no route that sets a user's groups from the user's side, so name every member in users.
 ---
 
 # openwebui_group (Resource)
 
-Manages a user group in Open WebUI. Groups control workspace and chat permissions and are used for resource access control.
+Manages a user group in Open WebUI. A group carries a set of permissions for its members, and the `read_groups` and `write_groups` attributes of the other resources name groups to share a model, a prompt, a tool, or a knowledge base with.
+
+This resource owns the membership list. There is no route that sets a user's groups from the user's side, so name every member in `users`.
 
 ## Example Usage
 
@@ -51,7 +54,7 @@ resource "openwebui_group" "example" {
 
 ### Optional
 
-- `permissions` (Attributes) Optional permission overrides for group members. Omit to use Open WebUI defaults. (see [below for nested schema](#nestedatt--permissions))
+- `permissions` (Attributes) Permission overrides for group members. Omit a category, or a key inside one, to leave it at the default from `openwebui_default_user_permissions`. Open WebUI stores group permissions as a free-form object, so a key this provider build does not know is still sent, with a warning. (see [below for nested schema](#nestedatt--permissions))
 - `users` (List of String) List of user email addresses or UUIDs who are members of this group.
 
 ### Read-Only
@@ -66,9 +69,20 @@ resource "openwebui_group" "example" {
 
 Optional:
 
-- `access_grants` (Map of Boolean) Access-grant permissions, controlling whether group members may share a resource with other users or with other groups. Keys Open WebUI v0.11.0 defines: `allow_users`, `allow_groups`. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.
-- `chat` (Map of Boolean) Chat-level permissions. Keys Open WebUI v0.11.0 defines: `controls`, `valves`, `system_prompt`, `params`, `file_upload`, `delete`, `delete_message`, `continue_response`, `regenerate_response`, `rate_response`, `edit`, `share`, `export`, `import`, `stt`, `tts`, `call`, `multiple_models`, `temporary`, `temporary_enforced`, `web_upload`. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.
-- `features` (Map of Boolean) Feature access permissions. Keys Open WebUI v0.11.0 defines: `direct_tool_servers`, `web_search`, `image_generation`, `code_interpreter`, `notes`, `memories`, `api_keys`, `channels`, `folders`, `automations`, `calendar`, `webhooks`. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.
-- `settings` (Map of Boolean) Settings permissions, controlling whether group members may change their interface settings. Keys Open WebUI v0.11.0 defines: `interface`. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.
-- `sharing` (Map of Boolean) Sharing permissions. Keys Open WebUI v0.11.0 defines: `public_models`, `public_knowledge`, `public_prompts`, `public_tools`, `models`, `knowledge`, `prompts`, `tools`, `skills`, `public_skills`, `notes`, `public_notes`, `folders`, `open_chats`, `public_chats`, `public_calendars`. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.
-- `workspace` (Map of Boolean) Workspace-level permissions. Keys Open WebUI v0.11.0 defines: `models`, `knowledge`, `prompts`, `tools`, `skills`, `models_import`, `models_export`, `prompts_import`, `prompts_export`, `tools_import`, `tools_export`, `skills_import`, `skills_export`. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.
+- `access_grants` (Map of Boolean) Access-grant permissions, controlling whether group members may share a resource with other users or with other groups. Keys Open WebUI v0.11.0 defines: `allow_users`, `allow_groups`.
+- `chat` (Map of Boolean) Chat-level permissions. Keys Open WebUI v0.11.0 defines: `controls`, `valves`, `system_prompt`, `params`, `file_upload`, `delete`, `delete_message`, `continue_response`, `regenerate_response`, `rate_response`, `edit`, `share`, `export`, `import`, `stt`, `tts`, `call`, `multiple_models`, `temporary`, `temporary_enforced`, `web_upload`.
+- `features` (Map of Boolean) Feature access permissions. Keys Open WebUI v0.11.0 defines: `direct_tool_servers`, `web_search`, `image_generation`, `code_interpreter`, `notes`, `memories`, `api_keys`, `channels`, `folders`, `automations`, `calendar`, `webhooks`.
+- `settings` (Map of Boolean) Settings permissions, controlling whether group members may change their interface settings. Keys Open WebUI v0.11.0 defines: `interface`.
+- `sharing` (Map of Boolean) Sharing permissions. Keys Open WebUI v0.11.0 defines: `public_models`, `public_knowledge`, `public_prompts`, `public_tools`, `models`, `knowledge`, `prompts`, `tools`, `skills`, `public_skills`, `notes`, `public_notes`, `folders`, `open_chats`, `public_chats`, `public_calendars`.
+- `workspace` (Map of Boolean) Workspace-level permissions. Keys Open WebUI v0.11.0 defines: `models`, `knowledge`, `prompts`, `tools`, `skills`, `models_import`, `models_export`, `prompts_import`, `prompts_export`, `tools_import`, `tools_export`, `skills_import`, `skills_export`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A group is imported by the UUID Open WebUI assigned it, not by its name.
+terraform import openwebui_group.example 4c9f2b1d-7e3a-4c5b-8d6e-1a2b3c4d5e6f
+```

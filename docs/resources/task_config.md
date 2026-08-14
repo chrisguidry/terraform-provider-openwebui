@@ -3,12 +3,15 @@
 page_title: "openwebui_task_config Resource - openwebui"
 subcategory: ""
 description: |-
-  Manages the task settings for Open WebUI: the model that runs background tasks and the prompt templates for chat titles, tags, autocomplete, search queries, follow ups, tool calling, and voice mode. Open WebUI writes all eighteen settings on every update, so every attribute of this resource is required. An empty template string is a real value that means "use the template built into Open WebUI".
+  Manages the task settings for Open WebUI: the model that runs background tasks and the prompt templates for chat titles, tags, autocomplete, search queries, follow ups, tool calling, and voice mode. Open WebUI writes all eighteen settings on every update, and rejects a request that omits one, so this resource sends all eighteen every time. Fifteen are required here. The other three are nullable in Open WebUI, so they are optional, and the provider sends null when they are unset.
+  An empty template string is a real value that means "use the template built into Open WebUI".
 ---
 
 # openwebui_task_config (Resource)
 
-Manages the task settings for Open WebUI: the model that runs background tasks and the prompt templates for chat titles, tags, autocomplete, search queries, follow ups, tool calling, and voice mode. Open WebUI writes all eighteen settings on every update, so every attribute of this resource is required. An empty template string is a real value that means "use the template built into Open WebUI".
+Manages the task settings for Open WebUI: the model that runs background tasks and the prompt templates for chat titles, tags, autocomplete, search queries, follow ups, tool calling, and voice mode. Open WebUI writes all eighteen settings on every update, and rejects a request that omits one, so this resource sends all eighteen every time. Fifteen are required here. The other three are nullable in Open WebUI, so they are optional, and the provider sends null when they are unset.
+
+An empty template string is a real value that means "use the template built into Open WebUI".
 
 ## Example Usage
 
@@ -50,7 +53,7 @@ resource "openwebui_task_config" "example" {
 ### Required
 
 - `autocomplete_generation_input_max_length` (Number) Maximum length in characters of the input sent for autocompletion. A negative value removes the limit.
-- `autocomplete_generation_prompt_template` (String) Prompt template for autocompletion. Set it to an empty string to use the template built into Open WebUI.
+- `autocomplete_generation_prompt_template` (String) Prompt template for autocompletion.
 - `enable_autocomplete_generation` (Boolean) Whether Open WebUI completes the message a user is typing.
 - `enable_follow_up_generation` (Boolean) Whether Open WebUI suggests follow-up questions.
 - `enable_retrieval_query_generation` (Boolean) Whether Open WebUI writes a knowledge retrieval query from the chat.
@@ -58,19 +61,31 @@ resource "openwebui_task_config" "example" {
 - `enable_tags_generation` (Boolean) Whether Open WebUI generates tags for each chat.
 - `enable_title_generation` (Boolean) Whether Open WebUI generates a title for each chat.
 - `enable_voice_mode_prompt` (Boolean) Whether Open WebUI adds a voice mode system prompt to spoken conversations.
-- `follow_up_generation_prompt_template` (String) Prompt template for follow-up suggestions. Set it to an empty string to use the template built into Open WebUI.
-- `image_prompt_generation_prompt_template` (String) Prompt template that turns a chat into an image generation prompt. Set it to an empty string to use the template built into Open WebUI.
-- `query_generation_prompt_template` (String) Prompt template for search and retrieval queries. Set it to an empty string to use the template built into Open WebUI.
-- `tags_generation_prompt_template` (String) Prompt template for chat tags. Set it to an empty string to use the template built into Open WebUI.
-- `title_generation_prompt_template` (String) Prompt template for chat titles. Set it to an empty string to use the template built into Open WebUI.
-- `tools_function_calling_prompt_template` (String) Prompt template that asks a model without native tool calling to pick a tool. Set it to an empty string to use the template built into Open WebUI.
+- `follow_up_generation_prompt_template` (String) Prompt template for follow-up suggestions.
+- `image_prompt_generation_prompt_template` (String) Prompt template that turns a chat into an image generation prompt.
+- `query_generation_prompt_template` (String) Prompt template for search and retrieval queries.
+- `tags_generation_prompt_template` (String) Prompt template for chat tags.
+- `title_generation_prompt_template` (String) Prompt template for chat titles.
+- `tools_function_calling_prompt_template` (String) Prompt template that asks a model without native tool calling to pick a tool.
 
 ### Optional
 
 - `task_model` (String) Model id that runs tasks for local models. Null makes Open WebUI use the model of the chat itself.
 - `task_model_external` (String) Model id that runs tasks for external models. Null makes Open WebUI use the model of the chat itself.
-- `voice_mode_prompt_template` (String) Prompt template for voice mode. Set it to an empty string to use the template built into Open WebUI.
+- `voice_mode_prompt_template` (String) Prompt template for voice mode. Unlike the other templates this one is nullable: left unset, the provider sends null rather than the empty string.
 
 ### Read-Only
 
-- `id` (String) Singleton identifier. Set by Open WebUI.
+- `id` (String) Identifier of this singleton resource. Always `task_config`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Open WebUI holds one task configuration, so this resource is a singleton.
+# Import it under its fixed id.
+terraform import openwebui_task_config.example task_config
+```

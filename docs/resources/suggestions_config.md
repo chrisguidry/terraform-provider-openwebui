@@ -39,7 +39,7 @@ resource "openwebui_suggestions_config" "example" {
 
 ### Read-Only
 
-- `id` (String) Singleton identifier. Set by Open WebUI.
+- `id` (String) Identifier of this singleton resource. Always `suggestions`.
 
 <a id="nestedatt--suggestions"></a>
 ### Nested Schema for `suggestions`
@@ -48,3 +48,17 @@ Required:
 
 - `content` (String) Full prompt text sent when the user selects this suggestion.
 - `title` (List of String) Display title lines for the suggestion (list of strings).
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# The prompt suggestions are one configuration block, so this resource is a
+# singleton. Import it under its fixed id. The suggestions API serves no read
+# route, so the import adopts the id alone and the next apply writes the list
+# from the configuration.
+terraform import openwebui_suggestions_config.example suggestions
+```

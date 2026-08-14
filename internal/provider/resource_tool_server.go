@@ -111,8 +111,8 @@ func (r *toolServerResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Mirrors `server_id`.",
-				MarkdownDescription: "Mirrors `server_id`.",
+				Description:         "Terraform identifier. Always equal to `server_id`.",
+				MarkdownDescription: "Terraform identifier. Always equal to `server_id`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"server_id": schema.StringAttribute{

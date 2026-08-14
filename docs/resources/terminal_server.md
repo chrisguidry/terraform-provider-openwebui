@@ -45,7 +45,7 @@ variable "terminal_server_key" {
 
 ### Required
 
-- `server_id` (String) Identifier of the connection within the terminal server list. Chosen by the practitioner, not by Open WebUI. Changing it replaces the connection.
+- `server_id` (String) Identifier of the connection within the terminal server list. You choose it, Open WebUI does not. Changing it replaces the connection.
 - `url` (String) Base URL of the terminal server, e.g. `http://terminals.internal:8080`.
 
 ### Optional
@@ -62,3 +62,14 @@ variable "terminal_server_key" {
 ### Read-Only
 
 - `id` (String) Terraform identifier. Always equal to `server_id`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A terminal server is imported by its server_id.
+terraform import openwebui_terminal_server.example workshop
+```

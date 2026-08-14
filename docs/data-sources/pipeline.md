@@ -13,8 +13,8 @@ Looks up an existing pipeline by its `pipeline_id` or `url`.
 ## Example Usage
 
 ```terraform
-data "openwebui_pipeline" "my_pipeline" {
-  name = "My Pipeline"
+data "openwebui_pipeline" "rate_limit" {
+  pipeline_id = "rate_limit_filter"
 }
 ```
 
@@ -25,9 +25,9 @@ data "openwebui_pipeline" "my_pipeline" {
 
 - `pipeline_id` (String) Pipeline identifier to look up. If omitted, `url` must be provided.
 - `url` (String) Base URL of the pipeline server. If omitted, `pipeline_id` must be provided.
-- `url_idx` (Number) URL index of the pipeline. Defaults to 0.
+- `url_idx` (Number) Index of the pipeline server URL as stored by Open WebUI. Defaults to 0.
 
 ### Read-Only
 
 - `details_json` (String) JSON metadata about the pipeline as returned by Open WebUI.
-- `id` (String) Composite identifier in the form `pipeline_id:url_idx`.
+- `id` (String) Terraform identifier. Always equal to `pipeline_id`.

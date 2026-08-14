@@ -51,7 +51,7 @@ func (d *promptDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			},
 			"content": schema.StringAttribute{
 				Computed:    true,
-				Description: "Prompt template text.",
+				Description: "Prompt template text. A `{{variable}}` placeholder in it is filled in by the user.",
 			},
 			"tags": schema.ListAttribute{
 				ElementType: types.StringType,
@@ -60,11 +60,11 @@ func (d *promptDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			},
 			"data_json": schema.StringAttribute{
 				Computed:    true,
-				Description: "Arbitrary JSON metadata object for the prompt.",
+				Description: "The prompt's `data` object, as JSON. Open WebUI stores it and reads it back without interpreting it.",
 			},
 			"meta_json": schema.StringAttribute{
 				Computed:    true,
-				Description: "Arbitrary JSON metadata object for the prompt.",
+				Description: "The prompt's `meta` object, as JSON. Open WebUI stores it and reads it back without interpreting it.",
 			},
 			"read_groups": schema.ListAttribute{
 				ElementType: types.StringType,
@@ -94,7 +94,7 @@ func (d *promptDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			},
 			"user_id": schema.StringAttribute{
 				Computed:    true,
-				Description: "Owner user identifier.",
+				Description: "UUID of the Open WebUI account that owns this object.",
 			},
 		},
 	}

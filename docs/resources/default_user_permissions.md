@@ -110,16 +110,28 @@ resource "openwebui_default_user_permissions" "example" {
 
 ### Read-Only
 
-- `id` (String) Singleton identifier. Set by Open WebUI.
+- `id` (String) Identifier of this singleton resource. Always `default_user_permissions`.
 
 <a id="nestedatt--permissions"></a>
 ### Nested Schema for `permissions`
 
 Required:
 
-- `access_grants` (Map of Boolean) Access-grant permissions, controlling whether a user may share a resource with other users or with groups. Every key is required: `allow_users`, `allow_groups`. Open WebUI replaces the whole permissions object on each write, so a key left out would take the value its Pydantic model defaults to.
-- `chat` (Map of Boolean) Chat-level permissions. Every key is required: `controls`, `valves`, `system_prompt`, `params`, `file_upload`, `delete`, `delete_message`, `continue_response`, `regenerate_response`, `rate_response`, `edit`, `share`, `export`, `import`, `stt`, `tts`, `call`, `multiple_models`, `temporary`, `temporary_enforced`, `web_upload`. Open WebUI replaces the whole permissions object on each write, so a key left out would take the value its Pydantic model defaults to.
-- `features` (Map of Boolean) Feature access permissions. Every key is required: `direct_tool_servers`, `web_search`, `image_generation`, `code_interpreter`, `notes`, `memories`, `api_keys`, `channels`, `folders`, `automations`, `calendar`, `webhooks`. Open WebUI replaces the whole permissions object on each write, so a key left out would take the value its Pydantic model defaults to.
-- `settings` (Map of Boolean) Settings permissions, controlling whether a user may change their interface settings. Every key is required: `interface`. Open WebUI replaces the whole permissions object on each write, so a key left out would take the value its Pydantic model defaults to.
-- `sharing` (Map of Boolean) Sharing permissions. `open_chats` is not among them: this route deletes that key. Every key is required: `public_models`, `public_knowledge`, `public_prompts`, `public_tools`, `models`, `knowledge`, `prompts`, `tools`, `skills`, `public_skills`, `notes`, `public_notes`, `folders`, `public_chats`, `public_calendars`. Open WebUI replaces the whole permissions object on each write, so a key left out would take the value its Pydantic model defaults to.
-- `workspace` (Map of Boolean) Workspace-level permissions. Every key is required: `models`, `knowledge`, `prompts`, `tools`, `skills`, `models_import`, `models_export`, `prompts_import`, `prompts_export`, `tools_import`, `tools_export`, `skills_import`, `skills_export`. Open WebUI replaces the whole permissions object on each write, so a key left out would take the value its Pydantic model defaults to.
+- `access_grants` (Map of Boolean) Access-grant permissions, controlling whether a user may share a resource with other users or with groups. Every key is required: `allow_users`, `allow_groups`.
+- `chat` (Map of Boolean) Chat-level permissions. Every key is required: `controls`, `valves`, `system_prompt`, `params`, `file_upload`, `delete`, `delete_message`, `continue_response`, `regenerate_response`, `rate_response`, `edit`, `share`, `export`, `import`, `stt`, `tts`, `call`, `multiple_models`, `temporary`, `temporary_enforced`, `web_upload`.
+- `features` (Map of Boolean) Feature access permissions. Every key is required: `direct_tool_servers`, `web_search`, `image_generation`, `code_interpreter`, `notes`, `memories`, `api_keys`, `channels`, `folders`, `automations`, `calendar`, `webhooks`.
+- `settings` (Map of Boolean) Settings permissions, controlling whether a user may change their interface settings. Every key is required: `interface`.
+- `sharing` (Map of Boolean) Sharing permissions. `open_chats` is not among them: this route deletes that key. Every key is required: `public_models`, `public_knowledge`, `public_prompts`, `public_tools`, `models`, `knowledge`, `prompts`, `tools`, `skills`, `public_skills`, `notes`, `public_notes`, `folders`, `public_chats`, `public_calendars`.
+- `workspace` (Map of Boolean) Workspace-level permissions. Every key is required: `models`, `knowledge`, `prompts`, `tools`, `skills`, `models_import`, `models_export`, `prompts_import`, `prompts_export`, `tools_import`, `tools_export`, `skills_import`, `skills_export`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# The default permissions are one configuration block, so this resource is a
+# singleton. Import it under its fixed id.
+terraform import openwebui_default_user_permissions.example default_user_permissions
+```

@@ -1,3 +1,3 @@
 data "openwebui_tool" "scraper" {
-  name = "Web Scraper"
+  tool_id = "web_scraper"
 }

@@ -74,8 +74,8 @@ func (r *terminalServerResource) Schema(_ context.Context, _ resource.SchemaRequ
 			},
 			"server_id": schema.StringAttribute{
 				Required:            true,
-				Description:         "Identifier of the connection within the terminal server list. Chosen by the practitioner, not by Open WebUI. Changing it replaces the connection.",
-				MarkdownDescription: "Identifier of the connection within the terminal server list. Chosen by the practitioner, not by Open WebUI. Changing it replaces the connection.",
+				Description:         "Identifier of the connection within the terminal server list. You choose it, Open WebUI does not. Changing it replaces the connection.",
+				MarkdownDescription: "Identifier of the connection within the terminal server list. You choose it, Open WebUI does not. Changing it replaces the connection.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"name": schema.StringAttribute{

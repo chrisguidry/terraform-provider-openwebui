@@ -15,5 +15,13 @@ provider "openwebui" {
 variable "openwebui_token" {
   type        = string
   sensitive   = true
-  description = "API token for the Open WebUI instance."
+  description = "Admin API token for the Open WebUI instance."
 }
+
+# The same settings come from the environment when the provider block leaves
+# them out, which keeps the token out of the configuration entirely:
+#
+#   export OPENWEBUI_ENDPOINT=https://openwebui.example.com
+#   export OPENWEBUI_TOKEN=...
+#
+# provider "openwebui" {}

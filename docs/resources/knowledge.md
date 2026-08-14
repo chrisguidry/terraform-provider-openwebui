@@ -46,3 +46,14 @@ resource "openwebui_knowledge" "example" {
 - `id` (String) UUID assigned by Open WebUI on create.
 - `updated_at` (String) Last-updated date in `YYYY-MM-DD` format. Set by Open WebUI.
 - `user_id` (String) Identifier of the Open WebUI user that owns the knowledge entry. Set by Open WebUI.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A knowledge base is imported by the UUID Open WebUI assigned it.
+terraform import openwebui_knowledge.example 7a1b2c3d-4e5f-4061-8273-9a0b1c2d3e4f
+```

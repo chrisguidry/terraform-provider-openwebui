@@ -87,7 +87,7 @@ func defaultUserPermissionCategoryDescription(category, summary string) string {
 	}
 
 	return fmt.Sprintf(
-		"%s Every key is required: %s. Open WebUI replaces the whole permissions object on each write, so a key left out would take the value its Pydantic model defaults to.",
+		"%s Every key is required: %s.",
 		summary, strings.Join(quoted, ", "),
 	)
 }
@@ -329,7 +329,7 @@ func filterPermissionResponse(category string, nested map[string]any, diags *dia
 // keys the provider knows.
 func permissionCategoryDescription(category, summary string) string {
 	return fmt.Sprintf(
-		"%s Keys Open WebUI v0.11.0 defines: %s. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.",
+		"%s Keys Open WebUI v0.11.0 defines: %s.",
 		summary, permissionKeysMarkdown(category),
 	)
 }

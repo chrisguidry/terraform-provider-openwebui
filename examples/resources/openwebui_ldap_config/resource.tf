@@ -20,3 +20,8 @@ resource "openwebui_ldap_config" "example" {
   enable_group_creation   = false
   attribute_for_groups    = "memberOf"
 }
+
+variable "ldap_bind_password" {
+  type      = string
+  sensitive = true
+}

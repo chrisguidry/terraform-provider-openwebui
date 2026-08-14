@@ -1,3 +1,3 @@
 data "openwebui_file" "doc" {
-  id = "abc12345-0000-0000-0000-000000000000"
+  file_id = "3b2d5c7a-1e4f-4b8c-9d0a-6f5e4d3c2b1a"
 }

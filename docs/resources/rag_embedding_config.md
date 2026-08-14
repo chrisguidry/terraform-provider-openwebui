@@ -58,7 +58,7 @@ variable "openai_api_key" {
 
 ### Read-Only
 
-- `id` (String) Singleton identifier. Set by Open WebUI.
+- `id` (String) Identifier of this singleton resource. Always `rag_embedding`.
 
 <a id="nestedatt--azure_openai_config"></a>
 ### Nested Schema for `azure_openai_config`
@@ -86,3 +86,15 @@ Required:
 
 - `key` (String, Sensitive) API key for the embedding endpoint. Sensitive.
 - `url` (String) Base URL of the OpenAI-compatible embedding API.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# The embedding settings are one configuration block, so this resource is a
+# singleton. Import it under its fixed id.
+terraform import openwebui_rag_embedding_config.example rag_embedding
+```

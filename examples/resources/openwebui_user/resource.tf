@@ -2,8 +2,8 @@
 # records it. No route reads a password back, so a password changed elsewhere is
 # invisible here. To rotate one, change the password and the marker together.
 resource "openwebui_user" "kid" {
-  name  = "Sam Guidry"
-  email = "sam@example.com"
+  name  = "Alex Doe"
+  email = "alex@example.com"
   role  = "user"
 
   password         = var.sam_password
@@ -15,4 +15,9 @@ resource "openwebui_group" "family" {
   name        = "Family"
   description = "Everyone in the house"
   users       = [openwebui_user.kid.email]
+}
+
+variable "sam_password" {
+  type      = string
+  sensitive = true
 }

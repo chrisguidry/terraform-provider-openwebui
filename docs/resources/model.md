@@ -23,6 +23,9 @@ resource "openwebui_model" "example" {
   read_groups  = ["Support"]
   write_groups = ["Support"]
 
+  # Skills the model loads with every conversation, by skill_id.
+  skill_ids = ["code-review"]
+
   params = {
     temperature = 0.1
     num_ctx     = 4096
@@ -42,7 +45,7 @@ resource "openwebui_model" "example" {
 
 - `model_id` (String) Unique identifier for the model, e.g. `custom-rag`.
 - `name` (String) Display name shown in the Open WebUI interface.
-- `params` (Attributes) Optional model parameter overrides. (see [below for nested schema](#nestedatt--params))
+- `params` (Attributes) Model parameter overrides. The block is required, and every attribute inside it is optional, so a model that changes no parameter writes `params = {}`. A parameter left out keeps whatever the base model uses. (see [below for nested schema](#nestedatt--params))
 
 ### Optional
 
@@ -50,7 +53,7 @@ resource "openwebui_model" "example" {
 - `capabilities` (Attributes) Feature capability toggles for this model. (see [below for nested schema](#nestedatt--capabilities))
 - `default_feature_ids` (List of String) List of feature IDs enabled by default, e.g. `["web_search"]`.
 - `description` (String) Short description shown alongside the model name.
-- `hidden` (Boolean) When `true`, the model is hidden from the model selector list in the UI but remains usable via the API. Distinct from `is_active` — a hidden model is still active.
+- `hidden` (Boolean) When `true`, the model is hidden from the model selector list in the UI but remains usable via the API. It is not the same as `is_active`. A hidden model is still active.
 - `is_active` (Boolean) Whether the model is visible and available to users. Defaults to `false`.
 - `knowledge_ids` (List of String) List of knowledge base IDs attached to the model. Open WebUI stores a copy of each knowledge base under `meta.knowledge`; the provider resolves the IDs on write and reports only the IDs on read. Knowledge entries attached in the web UI that name a single file or note are not represented here, and setting this attribute replaces them.
 - `meta_additional_json` (String) Additional metadata JSON merged into the model's `meta` object. e.g. `jsonencode({ info = "custom" })`. Two keys never appear here: `knowledge`, which `knowledge_ids` manages, and `chat_variables_schema`, which Open WebUI derives from the system prompt on every read.
@@ -58,7 +61,7 @@ resource "openwebui_model" "example" {
 - `profile_image_url` (String) URL of the model's profile image. Open WebUI accepts an empty string, `/user.png`, `/favicon.png`, `/static/favicon.png`, `/api/v1/users/{id}/profile/image`, an `http(s)` URL with a host, or a `data:image/{png,jpeg,gif,webp};base64,` URI. It drops anything else without an error.
 - `public_read` (Boolean) Whether every signed-in user can read the model. This is what the web UI calls public sharing.
 - `public_write` (Boolean) Whether every signed-in user can edit the model.
-- `read_groups` (List of String) List of group names or IDs granted read access. Leave unset or empty for public access.
+- `read_groups` (List of String) List of group names or IDs granted read access. With no groups and neither `public_read` nor `public_write`, the model is visible to its owner and to admins only.
 - `skill_ids` (List of String) List of skill IDs to attach to the model by default.
 - `suggestion_prompts` (List of String) List of suggested starter prompts shown when the model is selected.
 - `tags` (List of String) List of tags for categorising the model.
@@ -68,7 +71,7 @@ resource "openwebui_model" "example" {
 ### Read-Only
 
 - `created_at` (Number) Unix timestamp of when the model was created. Set by Open WebUI.
-- `id` (String) Composite identifier mirroring `model_id`.
+- `id` (String) Terraform identifier. Always equal to `model_id`.
 - `updated_at` (Number) Unix timestamp of when the model was last updated. Set by Open WebUI.
 - `user_id` (String) Owner user identifier. Set by Open WebUI.
 
@@ -85,8 +88,8 @@ Optional:
 - `max_tokens` (Number) Maximum number of tokens to generate.
 - `min_p` (Number) Minimum probability threshold for token sampling.
 - `mirostat` (Number) Mirostat sampling mode: 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0.
-- `mirostat_eta` (Number) Mirostat learning rate.
-- `mirostat_tau` (Number) Mirostat target entropy.
+- `mirostat_eta` (Number) Mirostat learning rate. It sets how fast the sampler reacts to the generated text.
+- `mirostat_tau` (Number) Mirostat target entropy. A lower value makes the output more focused.
 - `num_batch` (Number) Batch size for prompt processing.
 - `num_ctx` (Number) Context window size in tokens.
 - `num_gpu` (Number) Number of GPU layers to use.
@@ -101,7 +104,7 @@ Optional:
 - `stream_delta_chunk_size` (Number) Chunk size in tokens for streaming responses.
 - `stream_response` (Boolean) Whether to stream the response. Defaults to the base model setting.
 - `system` (String) System prompt prepended to every conversation.
-- `temperature` (Number) Sampling temperature (0–2). Lower values are more deterministic.
+- `temperature` (Number) Sampling temperature, 0 to 2. Lower values are more deterministic.
 - `tfs_z` (Number) Tail free sampling z parameter.
 - `think` (Boolean) Whether to enable chain-of-thought reasoning.
 - `top_k` (Number) Top-k sampling: number of highest-probability tokens to consider.
@@ -127,3 +130,15 @@ Optional:
 - `usage` (Boolean) Whether token usage statistics are returned.
 - `vision` (Boolean) Whether the model accepts image inputs.
 - `web_search` (Boolean) Whether web search is available.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A model is imported by its model_id, the identifier the API and the model
+# picker use.
+terraform import openwebui_model.example custom-rag
+```

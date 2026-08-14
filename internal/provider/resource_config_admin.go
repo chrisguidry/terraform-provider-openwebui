@@ -116,8 +116,8 @@ func (r *adminConfigResource) Schema(_ context.Context, _ resource.SchemaRequest
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				Description:         "Singleton identifier. Set by Open WebUI.",
-				MarkdownDescription: "Singleton identifier. Set by Open WebUI.",
+				Description:         "Identifier of this singleton resource. Always `admin`.",
+				MarkdownDescription: "Identifier of this singleton resource. Always `admin`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"show_admin_details":                    adminBoolAttribute("Whether the sign-in page shows the administrator's contact details."),

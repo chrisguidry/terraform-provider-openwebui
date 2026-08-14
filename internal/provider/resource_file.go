@@ -74,13 +74,13 @@ func (r *fileResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"process": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				Description:   "Whether Open WebUI should process the file for RAG (chunk and embed it). Defaults to `false`.",
+				Description:   "Whether Open WebUI should process the file for RAG (chunk and embed it). Defaults to `false`. Forces replacement.",
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown(), boolplanmodifier.RequiresReplace()},
 			},
 			"process_in_background": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				Description:   "Whether RAG processing runs asynchronously. Only relevant when `process = true`. Defaults to `false`.",
+				Description:   "Whether RAG processing runs asynchronously. Only relevant when `process = true`. Defaults to `false`. Forces replacement.",
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown(), boolplanmodifier.RequiresReplace()},
 			},
 			"filename": schema.StringAttribute{

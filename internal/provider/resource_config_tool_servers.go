@@ -64,7 +64,7 @@ func (r *toolServersConfigResource) Schema(_ context.Context, _ resource.SchemaR
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
-				Description:   "Singleton identifier. Set by Open WebUI.",
+				Description:   "Identifier of this singleton resource. Always `tool_servers`.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"connections": schema.ListNestedAttribute{
@@ -82,7 +82,7 @@ func (r *toolServersConfigResource) Schema(_ context.Context, _ resource.SchemaR
 						},
 						"type": schema.StringAttribute{
 							Optional:    true,
-							Description: "Tool server type identifier.",
+							Description: "Tool server type, `openapi` or `mcp`.",
 						},
 						"auth_type": schema.StringAttribute{
 							Optional:    true,

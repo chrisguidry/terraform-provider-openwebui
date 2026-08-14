@@ -36,5 +36,5 @@ data "openwebui_knowledge" "faq" {
 - `public_write` (Boolean) Whether every signed-in user can edit the knowledge base.
 - `read_groups` (List of String) Read-access group names currently applied to this knowledge base.
 - `updated_at` (String) Last-updated date in `YYYY-MM-DD` format.
-- `user_id` (String) Owner user identifier.
+- `user_id` (String) UUID of the Open WebUI account that owns this object.
 - `write_groups` (List of String) Write-access group names currently applied to this knowledge base.

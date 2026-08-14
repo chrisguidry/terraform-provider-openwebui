@@ -8,6 +8,9 @@ resource "openwebui_model" "example" {
   read_groups  = ["Support"]
   write_groups = ["Support"]
 
+  # Skills the model loads with every conversation, by skill_id.
+  skill_ids = ["code-review"]
+
   params = {
     temperature = 0.1
     num_ctx     = 4096

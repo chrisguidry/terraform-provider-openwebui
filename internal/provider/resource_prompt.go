@@ -87,12 +87,12 @@ func (r *promptResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"data_json": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "Arbitrary JSON metadata object for the prompt. Use `jsonencode({})` to set an empty object.",
+				Description: "The prompt's `data` object, as JSON. Open WebUI stores it and reads it back without interpreting it. Use `jsonencode({})` to set an empty object.",
 			},
 			"meta_json": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "Arbitrary JSON metadata object for the prompt. Use `jsonencode({})` to set an empty object.",
+				Description: "The prompt's `meta` object, as JSON. Open WebUI stores it and reads it back without interpreting it. Use `jsonencode({})` to set an empty object.",
 			},
 			"read_groups": schema.ListAttribute{
 				ElementType:   types.StringType,

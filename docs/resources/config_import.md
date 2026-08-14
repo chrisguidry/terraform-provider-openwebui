@@ -38,4 +38,18 @@ resource "openwebui_config_import" "restore" {
 
 ### Read-Only
 
-- `id` (String) Singleton identifier, always `config_import`.
+- `id` (String) Identifier of this singleton resource. Always `config_import`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# The resource records the last configuration import, so it is a singleton.
+# Import it under its fixed id. State comes back holding the whole exported
+# configuration, not the subset the configuration names, so trim config_json to
+# the keys you manage before the next apply.
+terraform import openwebui_config_import.restore config_import
+```

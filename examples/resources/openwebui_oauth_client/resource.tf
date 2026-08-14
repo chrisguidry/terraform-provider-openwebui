@@ -18,3 +18,8 @@ resource "openwebui_oauth_client" "static" {
   oauth_scope      = "openid profile"
   type             = "mcp"
 }
+
+variable "paperless_oauth_client_secret" {
+  type      = string
+  sensitive = true
+}

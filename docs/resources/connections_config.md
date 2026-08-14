@@ -3,12 +3,15 @@
 page_title: "openwebui_connections_config Resource - openwebui"
 subcategory: ""
 description: |-
-  Manages connection settings for Open WebUI. This is a singleton resource that updates global connection configuration.
+  Manages the two instance-wide connection switches of Open WebUI, ENABLE_DIRECT_CONNECTIONS and ENABLE_BASE_MODELS_CACHE.
+  POST /api/v1/configs/connections writes both keys on every request, so both attributes are required. The model endpoints themselves live in openwebui_ollama_connections and openwebui_openai_connections.
 ---
 
 # openwebui_connections_config (Resource)
 
-Manages connection settings for Open WebUI. This is a singleton resource that updates global connection configuration.
+Manages the two instance-wide connection switches of Open WebUI, `ENABLE_DIRECT_CONNECTIONS` and `ENABLE_BASE_MODELS_CACHE`.
+
+`POST /api/v1/configs/connections` writes both keys on every request, so both attributes are required. The model endpoints themselves live in `openwebui_ollama_connections` and `openwebui_openai_connections`.
 
 ## Example Usage
 
@@ -24,9 +27,21 @@ resource "openwebui_connections_config" "example" {
 
 ### Required
 
-- `enable_base_models_cache` (Boolean) Whether base model lists are cached for performance.
-- `enable_direct_connections` (Boolean) Whether direct model connections from the browser are allowed.
+- `enable_base_models_cache` (Boolean) Whether Open WebUI caches the model list each backend returns, rather than asking every backend again on each request. Stored as `ENABLE_BASE_MODELS_CACHE`.
+- `enable_direct_connections` (Boolean) Whether a user may add their own model endpoint under Settings, which their browser then calls directly. Stored as `ENABLE_DIRECT_CONNECTIONS`.
 
 ### Read-Only
 
-- `id` (String) Singleton identifier. Set by Open WebUI.
+- `id` (String) Identifier of this singleton resource. Always `connections`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Open WebUI holds one direct-connections configuration, so this resource is a
+# singleton. Import it under its fixed id.
+terraform import openwebui_connections_config.example connections
+```

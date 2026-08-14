@@ -35,7 +35,7 @@ data "openwebui_group" "support" {
 - `meta_json` (String) JSON metadata blob associated with the group as returned by Open WebUI.
 - `permissions` (Attributes) Permission flags for group members returned by Open WebUI. (see [below for nested schema](#nestedatt--permissions))
 - `updated_at` (String) Last-updated date in `YYYY-MM-DD` format.
-- `user_id` (String) Owner user identifier.
+- `user_id` (String) UUID of the Open WebUI account that owns this object.
 - `users` (List of String) List of user email addresses or UUIDs in this group.
 
 <a id="nestedatt--permissions"></a>
@@ -43,9 +43,9 @@ data "openwebui_group" "support" {
 
 Read-Only:
 
-- `access_grants` (Map of Boolean) Access-grant permissions, controlling whether group members may share a resource with other users or with other groups. Keys Open WebUI v0.11.0 defines: `allow_users`, `allow_groups`. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.
-- `chat` (Map of Boolean) Chat-level permissions. Keys Open WebUI v0.11.0 defines: `controls`, `valves`, `system_prompt`, `params`, `file_upload`, `delete`, `delete_message`, `continue_response`, `regenerate_response`, `rate_response`, `edit`, `share`, `export`, `import`, `stt`, `tts`, `call`, `multiple_models`, `temporary`, `temporary_enforced`, `web_upload`. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.
-- `features` (Map of Boolean) Feature access permissions. Keys Open WebUI v0.11.0 defines: `direct_tool_servers`, `web_search`, `image_generation`, `code_interpreter`, `notes`, `memories`, `api_keys`, `channels`, `folders`, `automations`, `calendar`, `webhooks`. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.
-- `settings` (Map of Boolean) Settings permissions, controlling whether group members may change their interface settings. Keys Open WebUI v0.11.0 defines: `interface`. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.
-- `sharing` (Map of Boolean) Sharing permissions. Keys Open WebUI v0.11.0 defines: `public_models`, `public_knowledge`, `public_prompts`, `public_tools`, `models`, `knowledge`, `prompts`, `tools`, `skills`, `public_skills`, `notes`, `public_notes`, `folders`, `open_chats`, `public_chats`, `public_calendars`. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.
-- `workspace` (Map of Boolean) Workspace-level permissions. Keys Open WebUI v0.11.0 defines: `models`, `knowledge`, `prompts`, `tools`, `skills`, `models_import`, `models_export`, `prompts_import`, `prompts_export`, `tools_import`, `tools_export`, `skills_import`, `skills_export`. Any other key is sent to the server with a warning, because Open WebUI stores group permissions as a free-form object.
+- `access_grants` (Map of Boolean) Access-grant permissions, controlling whether group members may share a resource with other users or with other groups. Keys Open WebUI v0.11.0 defines: `allow_users`, `allow_groups`.
+- `chat` (Map of Boolean) Chat-level permissions. Keys Open WebUI v0.11.0 defines: `controls`, `valves`, `system_prompt`, `params`, `file_upload`, `delete`, `delete_message`, `continue_response`, `regenerate_response`, `rate_response`, `edit`, `share`, `export`, `import`, `stt`, `tts`, `call`, `multiple_models`, `temporary`, `temporary_enforced`, `web_upload`.
+- `features` (Map of Boolean) Feature access permissions. Keys Open WebUI v0.11.0 defines: `direct_tool_servers`, `web_search`, `image_generation`, `code_interpreter`, `notes`, `memories`, `api_keys`, `channels`, `folders`, `automations`, `calendar`, `webhooks`.
+- `settings` (Map of Boolean) Settings permissions, controlling whether group members may change their interface settings. Keys Open WebUI v0.11.0 defines: `interface`.
+- `sharing` (Map of Boolean) Sharing permissions. Keys Open WebUI v0.11.0 defines: `public_models`, `public_knowledge`, `public_prompts`, `public_tools`, `models`, `knowledge`, `prompts`, `tools`, `skills`, `public_skills`, `notes`, `public_notes`, `folders`, `open_chats`, `public_chats`, `public_calendars`.
+- `workspace` (Map of Boolean) Workspace-level permissions. Keys Open WebUI v0.11.0 defines: `models`, `knowledge`, `prompts`, `tools`, `skills`, `models_import`, `models_export`, `prompts_import`, `prompts_export`, `tools_import`, `tools_export`, `skills_import`, `skills_export`.

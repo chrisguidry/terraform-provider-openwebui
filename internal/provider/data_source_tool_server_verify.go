@@ -55,7 +55,7 @@ func (d *toolServerVerifyDataSource) Schema(_ context.Context, _ datasource.Sche
 			},
 			"type": schema.StringAttribute{
 				Optional:    true,
-				Description: "Tool server type identifier.",
+				Description: "Kind of server Open WebUI verifies this as, `openapi` or `mcp`. The value is sent with the request, not read back from the server.",
 			},
 			"auth_type": schema.StringAttribute{
 				Optional:    true,
@@ -76,7 +76,7 @@ func (d *toolServerVerifyDataSource) Schema(_ context.Context, _ datasource.Sche
 			},
 			"verified": schema.BoolAttribute{
 				Computed:    true,
-				Description: "`true` if the server responded with a valid OpenAPI spec.",
+				Description: "Always `true`. The read fails with an error when the server does not answer with a valid spec, so this attribute never reads `false`.",
 			},
 		},
 	}

@@ -3,15 +3,18 @@
 page_title: "openwebui_function Resource - openwebui"
 subcategory: ""
 description: |-
-  Manages an Open WebUI function — a Pipe, Filter, or Action plugin written in Python.
-  The type and manifest_json are derived by Open WebUI from the Python source you provide and are read-only. The class you define (Pipe, Filter, or Action) determines the type.
+  Manages an Open WebUI function, which is a Pipe, Filter, or Action plugin written in Python.
+  Open WebUI derives type and manifest_json from the Python source you provide, so both are read-only. The class you define, Pipe, Filter, or Action, sets the type.
+  A function reads its settings from openwebui_function_valves, a separate resource, so changing a setting does not rewrite the source.
 ---
 
 # openwebui_function (Resource)
 
-Manages an Open WebUI function — a Pipe, Filter, or Action plugin written in Python.
+Manages an Open WebUI function, which is a Pipe, Filter, or Action plugin written in Python.
 
-The `type` and `manifest_json` are derived by Open WebUI from the Python source you provide and are read-only. The class you define (`Pipe`, `Filter`, or `Action`) determines the type.
+Open WebUI derives `type` and `manifest_json` from the Python source you provide, so both are read-only. The class you define, `Pipe`, `Filter`, or `Action`, sets the type.
+
+A function reads its settings from `openwebui_function_valves`, a separate resource, so changing a setting does not rewrite the source.
 
 ## Example Usage
 
@@ -45,8 +48,20 @@ resource "openwebui_function" "example" {
 ### Read-Only
 
 - `created_at` (Number) Unix timestamp of creation. Set by Open WebUI.
-- `id` (String) Mirrors `function_id`.
+- `id` (String) Terraform identifier. Always equal to `function_id`.
 - `manifest_json` (String) JSON manifest derived from the Python frontmatter. Read-only; set by Open WebUI.
 - `type` (String) Function type derived from the Python source: `pipe`, `filter`, or `action`. Read-only; set by Open WebUI.
 - `updated_at` (Number) Unix timestamp of last update. Set by Open WebUI.
 - `user_id` (String) Owner user identifier. Set by Open WebUI.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A function is imported by its function_id, the identifier it was registered
+# under.
+terraform import openwebui_function.example content_filter
+```

@@ -28,7 +28,7 @@ data "openwebui_user" "admin" {
 
 ### Read-Only
 
-- `bio` (String) User bio.
+- `bio` (String) Profile text the user wrote about themselves. Null when the account has none.
 - `created_at` (Number) Unix timestamp of when the user account was created.
 - `email` (String) Email address of the user.
 - `id` (String) UUID of the user. Set after lookup.
@@ -37,4 +37,4 @@ data "openwebui_user" "admin" {
 - `profile_image_url` (String) URL of the user's profile image.
 - `role` (String) Role of the user, e.g. `admin` or `user`.
 - `updated_at` (Number) Unix timestamp of when the user record was last updated.
-- `username` (String) Username of the user.
+- `username` (String) Username of the account. Null when the account has none.

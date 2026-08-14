@@ -34,8 +34,8 @@ resource "openwebui_prompt" "example" {
 
 ### Optional
 
-- `data_json` (String) Arbitrary JSON metadata object for the prompt. Use `jsonencode({})` to set an empty object.
-- `meta_json` (String) Arbitrary JSON metadata object for the prompt. Use `jsonencode({})` to set an empty object.
+- `data_json` (String) The prompt's `data` object, as JSON. Open WebUI stores it and reads it back without interpreting it. Use `jsonencode({})` to set an empty object.
+- `meta_json` (String) The prompt's `meta` object, as JSON. Open WebUI stores it and reads it back without interpreting it. Use `jsonencode({})` to set an empty object.
 - `public_read` (Boolean) When `true`, every signed-in user can read the prompt. This is what the Open WebUI interface calls public sharing.
 - `public_write` (Boolean) When `true`, every signed-in user can edit the prompt.
 - `read_groups` (List of String) List of group names or IDs granted read access.
@@ -48,3 +48,14 @@ resource "openwebui_prompt" "example" {
 - `id` (String) Server-assigned UUID for the prompt.
 - `updated_at` (String) Last-updated date in `YYYY-MM-DD` format. Set by Open WebUI.
 - `user_id` (String) Owner user identifier. Set by Open WebUI.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A prompt is imported by the id Open WebUI assigned it, not by its command.
+terraform import openwebui_prompt.example 5d4c3b2a-1f0e-4d9c-8b7a-6e5d4c3b2a1f
+```

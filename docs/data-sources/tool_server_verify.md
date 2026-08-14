@@ -33,8 +33,8 @@ data "openwebui_tool_server_verify" "local_tools" {
 - `config_json` (String) Additional JSON configuration for the verification request.
 - `headers_json` (String) JSON object of additional HTTP headers to send. e.g. `jsonencode({ X-Api-Version = "2" })`.
 - `key` (String, Sensitive) API key or bearer token. Sensitive.
-- `type` (String) Tool server type identifier.
+- `type` (String) Kind of server Open WebUI verifies this as, `openapi` or `mcp`. The value is sent with the request, not read back from the server.
 
 ### Read-Only
 
-- `verified` (Boolean) `true` if the server responded with a valid OpenAPI spec.
+- `verified` (Boolean) Always `true`. The read fails with an error when the server does not answer with a valid spec, so this attribute never reads `false`.

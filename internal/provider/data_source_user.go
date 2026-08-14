@@ -72,7 +72,7 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"username": schema.StringAttribute{
 				Computed:    true,
-				Description: "Username of the user.",
+				Description: "Username of the account. Null when the account has none.",
 			},
 			"role": schema.StringAttribute{
 				Computed:    true,
@@ -84,7 +84,7 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"bio": schema.StringAttribute{
 				Computed:    true,
-				Description: "User bio.",
+				Description: "Profile text the user wrote about themselves. Null when the account has none.",
 			},
 			"last_active_at": schema.Int64Attribute{
 				Computed:    true,

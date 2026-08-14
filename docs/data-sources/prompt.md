@@ -27,16 +27,16 @@ data "openwebui_prompt" "summarize" {
 
 ### Read-Only
 
-- `content` (String) Prompt template text.
+- `content` (String) Prompt template text. A `{{variable}}` placeholder in it is filled in by the user.
 - `created_at` (String) Creation date in `YYYY-MM-DD` format.
-- `data_json` (String) Arbitrary JSON metadata object for the prompt.
+- `data_json` (String) The prompt's `data` object, as JSON. Open WebUI stores it and reads it back without interpreting it.
 - `id` (String) Server-assigned UUID for the prompt.
-- `meta_json` (String) Arbitrary JSON metadata object for the prompt.
+- `meta_json` (String) The prompt's `meta` object, as JSON. Open WebUI stores it and reads it back without interpreting it.
 - `name` (String) Display name of the prompt.
 - `public_read` (Boolean) Whether every signed-in user can read the prompt.
 - `public_write` (Boolean) Whether every signed-in user can edit the prompt.
 - `read_groups` (List of String) Read-access group names currently applied to this prompt.
 - `tags` (List of String) List of tags for categorising the prompt.
 - `updated_at` (String) Last-updated date in `YYYY-MM-DD` format.
-- `user_id` (String) Owner user identifier.
+- `user_id` (String) UUID of the Open WebUI account that owns this object.
 - `write_groups` (List of String) Write-access group names currently applied to this prompt.

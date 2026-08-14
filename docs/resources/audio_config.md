@@ -53,7 +53,7 @@ variable "openai_api_key" {
 
 ### Read-Only
 
-- `id` (String) Singleton identifier. Set by Open WebUI.
+- `id` (String) Identifier of this singleton resource. Always `audio`.
 
 <a id="nestedatt--stt"></a>
 ### Nested Schema for `stt`
@@ -97,3 +97,15 @@ Optional:
 - `openai_params` (String) JSON object of extra parameters passed to the OpenAI speech API. Stored as `audio.tts.openai.params`.
 - `split_on` (String) Boundary the text is split on before synthesis, for example `punctuation`. Stored as `audio.tts.split_on`.
 - `voice` (String) Open WebUI setting `VOICE`. Stored as `audio.tts.voice`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Open WebUI holds one audio configuration, so this resource is a singleton.
+# Import it under its fixed id.
+terraform import openwebui_audio_config.example audio
+```

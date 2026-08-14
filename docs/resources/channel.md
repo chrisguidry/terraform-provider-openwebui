@@ -58,3 +58,14 @@ resource "openwebui_channel" "watercooler" {
 - `id` (String) UUID assigned by Open WebUI on create.
 - `updated_at` (Number) Last update timestamp in nanoseconds. Set by Open WebUI.
 - `user_id` (String) Identifier of the account that created the channel. Set by Open WebUI.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A channel is imported by the UUID Open WebUI assigned it.
+terraform import openwebui_channel.announcements 8f6c1f0e-8c6a-4a1a-9b0a-2f9a1d3c4e5f
+```

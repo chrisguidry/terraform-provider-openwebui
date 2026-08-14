@@ -23,8 +23,8 @@ Open WebUI protects the first account ever created, its primary admin. Nobody el
 # records it. No route reads a password back, so a password changed elsewhere is
 # invisible here. To rotate one, change the password and the marker together.
 resource "openwebui_user" "kid" {
-  name  = "Sam Guidry"
-  email = "sam@example.com"
+  name  = "Alex Doe"
+  email = "alex@example.com"
   role  = "user"
 
   password         = var.sam_password
@@ -36,6 +36,11 @@ resource "openwebui_group" "family" {
   name        = "Family"
   description = "Everyone in the house"
   users       = [openwebui_user.kid.email]
+}
+
+variable "sam_password" {
+  type      = string
+  sensitive = true
 }
 ```
 
@@ -63,3 +68,16 @@ resource "openwebui_group" "family" {
 - `last_active_at` (Number) Unix timestamp of the account's last activity. Set by Open WebUI.
 - `updated_at` (Number) Unix timestamp of the account's last change. Set by Open WebUI.
 - `username` (String) Username of the account. Set by Open WebUI.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A user is imported by the UUID Open WebUI assigned the account, not by the
+# email address. No route reads a password back, so set password and
+# password_version in the configuration after the import.
+terraform import openwebui_user.kid 2f8e7d6c-5b4a-4392-8170-6f5e4d3c2b1a
+```

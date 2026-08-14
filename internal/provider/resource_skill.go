@@ -144,8 +144,8 @@ func (r *skillResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"public_write": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Whether every signed-in user can write the skill.",
-				MarkdownDescription: "Whether every signed-in user can write the skill.",
+				Description:         "Whether every signed-in user can edit the skill.",
+				MarkdownDescription: "Whether every signed-in user can edit the skill.",
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"user_id": schema.StringAttribute{

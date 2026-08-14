@@ -3,12 +3,15 @@
 page_title: "openwebui_banners_config Resource - openwebui"
 subcategory: ""
 description: |-
-  Manages UI announcement banners displayed to all Open WebUI users.
+  Manages the announcement banners Open WebUI shows above the chat to every user.
+  This resource owns the whole list. Each write replaces it, so a banner added in the web UI is removed on the next apply, and taking a banner out of banners is how you retire it.
 ---
 
 # openwebui_banners_config (Resource)
 
-Manages UI announcement banners displayed to all Open WebUI users.
+Manages the announcement banners Open WebUI shows above the chat to every user.
+
+This resource owns the whole list. Each write replaces it, so a banner added in the web UI is removed on the next apply, and taking a banner out of `banners` is how you retire it.
 
 ## Example Usage
 
@@ -19,7 +22,7 @@ resource "openwebui_banners_config" "example" {
       id          = "maintenance-2024"
       type        = "warning"
       title       = "Scheduled Maintenance"
-      content     = "The system will be unavailable Saturday 2 AM – 4 AM UTC."
+      content     = "The system will be unavailable Saturday 2 AM to 4 AM UTC."
       dismissible = true
       timestamp   = 1700000000
     },
@@ -36,7 +39,7 @@ resource "openwebui_banners_config" "example" {
 
 ### Read-Only
 
-- `id` (String) Singleton identifier. Set by Open WebUI.
+- `id` (String) Identifier of this singleton resource. Always `banners`.
 
 <a id="nestedatt--banners"></a>
 ### Nested Schema for `banners`
@@ -45,10 +48,22 @@ Required:
 
 - `content` (String) Full body text of the banner.
 - `dismissible` (Boolean) Whether users can dismiss the banner.
-- `id` (String) Unique identifier for this banner.
-- `timestamp` (Number) Unix timestamp used for ordering banners.
+- `id` (String) Identifier of this banner, unique within the list. You choose it, Open WebUI does not.
+- `timestamp` (Number) Unix timestamp stored with the banner, in seconds. Any integer is accepted.
 - `type` (String) Visual style of the banner: `info`, `warning`, or `error`.
 
 Optional:
 
 - `title` (String) Short headline shown in the banner.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# The banner list is a single configuration block, so this resource is a
+# singleton. Import it under its fixed id, and the whole list comes with it.
+terraform import openwebui_banners_config.example banners
+```

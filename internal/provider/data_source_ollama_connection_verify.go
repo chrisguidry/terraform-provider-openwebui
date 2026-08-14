@@ -47,7 +47,7 @@ func (d *ollamaConnectionVerifyDataSource) Schema(_ context.Context, _ datasourc
 			},
 			"verified": schema.BoolAttribute{
 				Computed:    true,
-				Description: "`true` if Open WebUI successfully connected to the Ollama backend.",
+				Description: "Always `true`. The read fails with an error when Open WebUI cannot reach the backend, so this attribute never reads `false`.",
 			},
 		},
 	}

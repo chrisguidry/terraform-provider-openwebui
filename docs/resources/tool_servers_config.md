@@ -45,7 +45,7 @@ variable "tool_server_api_key" {
 
 ### Read-Only
 
-- `id` (String) Singleton identifier. Set by Open WebUI.
+- `id` (String) Identifier of this singleton resource. Always `tool_servers`.
 
 <a id="nestedatt--connections"></a>
 ### Nested Schema for `connections`
@@ -61,4 +61,17 @@ Optional:
 - `config_json` (String) Additional JSON configuration sent to the tool server.
 - `headers_json` (String) JSON object of extra HTTP headers to send to the tool server. e.g. `jsonencode({ X-Api-Version = "2" })`.
 - `key` (String, Sensitive) API key or bearer token for authenticating with the tool server. Sensitive.
-- `type` (String) Tool server type identifier.
+- `type` (String) Tool server type, `openapi` or `mcp`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# The tool server list is one configuration block, so this resource is a
+# singleton. Import it under its fixed id, and every registration comes with it.
+# To manage one registration on its own, use openwebui_tool_server instead.
+terraform import openwebui_tool_servers_config.example tool_servers
+```

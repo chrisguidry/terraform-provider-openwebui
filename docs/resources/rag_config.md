@@ -124,7 +124,7 @@ variable "tavily_api_key" {
 
 ### Read-Only
 
-- `id` (String) Singleton identifier. Set by Open WebUI.
+- `id` (String) Identifier of this singleton resource. Always `rag`.
 
 <a id="nestedatt--web"></a>
 ### Nested Schema for `web`
@@ -204,3 +204,15 @@ Optional:
 - `youcom_api_key` (String, Sensitive) Open WebUI setting `YOUCOM_API_KEY`. Stored as `web.search.youcom_api_key`. Sensitive.
 - `youtube_loader_language` (List of String) Open WebUI setting `YOUTUBE_LOADER_LANGUAGE`. Stored as `rag.youtube_loader_language`.
 - `youtube_loader_proxy_url` (String) Open WebUI setting `YOUTUBE_LOADER_PROXY_URL`. Stored as `rag.youtube_loader_proxy_url`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Open WebUI holds one RAG configuration, so this resource is a singleton.
+# Import it under its fixed id.
+terraform import openwebui_rag_config.example rag
+```

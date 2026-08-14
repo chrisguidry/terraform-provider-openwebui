@@ -93,7 +93,7 @@ func (d *knowledgeDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 			},
 			"user_id": schema.StringAttribute{
 				Computed:    true,
-				Description: "Owner user identifier.",
+				Description: "UUID of the Open WebUI account that owns this object.",
 			},
 		},
 	}

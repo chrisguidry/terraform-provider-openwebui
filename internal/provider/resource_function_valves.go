@@ -48,7 +48,7 @@ func (r *functionValvesResource) Schema(_ context.Context, _ resource.SchemaRequ
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
-				Description:   "Mirrors `function_id`.",
+				Description:   "Terraform identifier. Always equal to `function_id`.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"function_id": schema.StringAttribute{

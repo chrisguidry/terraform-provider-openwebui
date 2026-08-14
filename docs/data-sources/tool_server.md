@@ -34,7 +34,7 @@ data "openwebui_tool_server" "paperless" {
 - `description` (String) Description of an MCP server.
 - `enabled` (Boolean) Whether Open WebUI loads the server.
 - `headers_json` (String) JSON object of extra HTTP headers.
-- `id` (String) Mirrors `server_id`.
+- `id` (String) Terraform identifier. Always equal to `server_id`.
 - `key` (String, Sensitive) Bearer token sent to the tool server. Sensitive.
 - `name` (String) Display name of an MCP server.
 - `oauth_client_id` (String) OAuth client identifier used by a static OAuth connection.

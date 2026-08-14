@@ -143,7 +143,7 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
-				Description:   "Composite identifier mirroring `model_id`.",
+				Description:   "Terraform identifier. Always equal to `model_id`.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"model_id": schema.StringAttribute{
@@ -167,7 +167,7 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"hidden": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				Description:   "When `true`, the model is hidden from the model selector list in the UI but remains usable via the API. Distinct from `is_active` — a hidden model is still active.",
+				Description:   "When `true`, the model is hidden from the model selector list in the UI but remains usable via the API. It is not the same as `is_active`. A hidden model is still active.",
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"user_id": schema.StringAttribute{
@@ -199,7 +199,7 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				ElementType:   types.StringType,
 				Optional:      true,
 				Computed:      true,
-				Description:   "List of group names or IDs granted read access. Leave unset or empty for public access.",
+				Description:   "List of group names or IDs granted read access. With no groups and neither `public_read` nor `public_write`, the model is visible to its owner and to admins only.",
 				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"write_groups": schema.ListAttribute{
@@ -361,7 +361,7 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			},
 			"params": schema.SingleNestedAttribute{
 				Required:            true,
-				MarkdownDescription: "Optional model parameter overrides.",
+				MarkdownDescription: "Model parameter overrides. The block is required, and every attribute inside it is optional, so a model that changes no parameter writes `params = {}`. A parameter left out keeps whatever the base model uses.",
 				Attributes: map[string]schema.Attribute{
 					"system":                  schema.StringAttribute{Optional: true, Description: "System prompt prepended to every conversation."},
 					"stream_response":         schema.BoolAttribute{Optional: true, Description: "Whether to stream the response. Defaults to the base model setting."},
@@ -373,7 +373,7 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						Description: "List of XML tags used to delimit reasoning tokens.",
 					},
 					"seed":              schema.Int64Attribute{Optional: true, Description: "Random seed for reproducible outputs."},
-					"temperature":       schema.Float64Attribute{Optional: true, Description: "Sampling temperature (0–2). Lower values are more deterministic."},
+					"temperature":       schema.Float64Attribute{Optional: true, Description: "Sampling temperature, 0 to 2. Lower values are more deterministic."},
 					"keep_alive":        schema.StringAttribute{Optional: true, Description: "How long to keep the model loaded in memory, e.g. `\"5m\"`."},
 					"num_gpu":           schema.Int64Attribute{Optional: true, Description: "Number of GPU layers to use."},
 					"num_thread":        schema.Int64Attribute{Optional: true, Description: "Number of CPU threads to use for inference."},
@@ -387,8 +387,8 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					"repeat_penalty":    schema.Float64Attribute{Optional: true, Description: "Penalty applied to repeated tokens."},
 					"tfs_z":             schema.Float64Attribute{Optional: true, Description: "Tail free sampling z parameter."},
 					"repeat_last_n":     schema.Int64Attribute{Optional: true, Description: "Number of tokens to look back for repeat penalty."},
-					"mirostat_tau":      schema.Float64Attribute{Optional: true, Description: "Mirostat target entropy."},
-					"mirostat_eta":      schema.Float64Attribute{Optional: true, Description: "Mirostat learning rate."},
+					"mirostat_tau":      schema.Float64Attribute{Optional: true, Description: "Mirostat target entropy. A lower value makes the output more focused."},
+					"mirostat_eta":      schema.Float64Attribute{Optional: true, Description: "Mirostat learning rate. It sets how fast the sampler reacts to the generated text."},
 					"mirostat":          schema.Int64Attribute{Optional: true, Description: "Mirostat sampling mode: 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0."},
 					"presence_penalty":  schema.Float64Attribute{Optional: true, Description: "Penalty for tokens that have appeared at all."},
 					"frequency_penalty": schema.Float64Attribute{Optional: true, Description: "Penalty scaled by token frequency."},
