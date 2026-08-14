@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     openwebui = {
-      source  = "docktape/openwebui"
+      source  = "chrisguidry/openwebui"
       version = "~> 1.0"
     }
   }

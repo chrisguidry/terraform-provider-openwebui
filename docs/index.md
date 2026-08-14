@@ -46,7 +46,7 @@ The **openwebui** provider manages resources in an [Open WebUI](https://openwebu
 terraform {
   required_providers {
     openwebui = {
-      source  = "docktape/openwebui"
+      source  = "chrisguidry/openwebui"
       version = "~> 1.0"
     }
   }
