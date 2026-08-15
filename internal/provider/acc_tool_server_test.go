@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -285,6 +286,83 @@ resource "openwebui_tool_server" "weather" {
 				ImportState:       true,
 				ImportStateId:     "tf-acc-weather",
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// The filter list stores as a JSON array of strings, imports back as the
+// same list, and removing it removes the stored key.
+func TestAccToolServerFunctionNameFilterList(t *testing.T) {
+	filtered := fmt.Sprintf(`%s
+resource "openwebui_tool_server" "filtered" {
+  server_id                 = "tf-acc-filtered"
+  url                       = "https://tools.example/filtered"
+  path                      = "openapi.json"
+  auth_type                 = "none"
+  function_name_filter_list = ["get_", "!delete_"]
+}
+`, testAccProviderConfig())
+
+	unfiltered := fmt.Sprintf(`%s
+resource "openwebui_tool_server" "filtered" {
+  server_id = "tf-acc-filtered"
+  url       = "https://tools.example/filtered"
+  path      = "openapi.json"
+  auth_type = "none"
+}
+`, testAccProviderConfig())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: filtered,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_tool_server.filtered", "function_name_filter_list.#", "2"),
+					resource.TestCheckResourceAttr("openwebui_tool_server.filtered", "function_name_filter_list.0", "get_"),
+					resource.TestCheckResourceAttr("openwebui_tool_server.filtered", "function_name_filter_list.1", "!delete_"),
+					func(_ *terraform.State) error {
+						connection := testAccToolServerFind(t, "tf-acc-filtered")
+						if connection == nil {
+							return fmt.Errorf("expected the filtered connection to exist")
+						}
+
+						config, _ := connection["config"].(map[string]any)
+						if !reflect.DeepEqual(config["function_name_filter_list"], []any{"get_", "!delete_"}) {
+							return fmt.Errorf("expected the stored filter as an array of strings, got %v", config["function_name_filter_list"])
+						}
+
+						return nil
+					},
+				),
+			},
+			{
+				Config:            filtered,
+				ResourceName:      "openwebui_tool_server.filtered",
+				ImportState:       true,
+				ImportStateId:     "tf-acc-filtered",
+				ImportStateVerify: true,
+			},
+			{
+				Config: unfiltered,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr("openwebui_tool_server.filtered", "function_name_filter_list"),
+					func(_ *terraform.State) error {
+						connection := testAccToolServerFind(t, "tf-acc-filtered")
+						if connection == nil {
+							return fmt.Errorf("expected the connection to survive the edit")
+						}
+
+						config, _ := connection["config"].(map[string]any)
+						if value, present := config["function_name_filter_list"]; present {
+							return fmt.Errorf("expected the stored filter key to be removed, got %v", value)
+						}
+
+						return nil
+					},
+				),
 			},
 		},
 	})

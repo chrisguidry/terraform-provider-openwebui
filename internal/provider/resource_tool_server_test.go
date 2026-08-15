@@ -2,8 +2,10 @@ package provider
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -76,6 +78,152 @@ func TestToolServerEntryFromPlanOwnsOnlyItsOwnKeys(t *testing.T) {
 
 	if _, present := entry["spec_type"]; present {
 		t.Fatalf("expected an unset spec_type to be left out of the write, got %v", entry)
+	}
+}
+
+func TestToolServerEntryFromPlanStoresTheFilterListAsAnArray(t *testing.T) {
+	var diags diag.Diagnostics
+
+	plan := toolServerResourceModel{
+		ServerID: types.StringValue("paperless"),
+		URL:      types.StringValue("https://paperless.mcp.example"),
+		FunctionNameFilterList: types.ListValueMust(types.StringType, []attr.Value{
+			types.StringValue("get_"),
+			types.StringValue("!delete_"),
+		}),
+	}
+
+	entry := toolServerEntryFromPlan(context.Background(), toolServerTestClient(t), plan, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	config, ok := entry["config"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected a config object, got %v", entry["config"])
+	}
+	if !reflect.DeepEqual(config["function_name_filter_list"], []any{"get_", "!delete_"}) {
+		t.Fatalf("expected the filter list as an array of strings, got %v", config["function_name_filter_list"])
+	}
+}
+
+func TestToolServerEntryFromPlanRemovesAnUnsetFilterList(t *testing.T) {
+	var diags diag.Diagnostics
+
+	plan := toolServerResourceModel{
+		ServerID: types.StringValue("paperless"),
+		URL:      types.StringValue("https://paperless.mcp.example"),
+	}
+
+	entry := toolServerEntryFromPlan(context.Background(), toolServerTestClient(t), plan, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	config, ok := entry["config"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected a config object, got %v", entry["config"])
+	}
+
+	// A nil tells the client to remove the key, so every tool stays exposed.
+	value, present := config["function_name_filter_list"]
+	if !present || value != nil {
+		t.Fatalf("expected config.function_name_filter_list to be present and nil, got %v", value)
+	}
+}
+
+func TestToolServerStateFromEntryReadsTheFilterString(t *testing.T) {
+	entry := client.ToolServerEntry{
+		"url":    "https://paperless.mcp.example",
+		"config": map[string]any{"function_name_filter_list": "get_,,!delete_"},
+		"info":   map[string]any{"id": "paperless"},
+	}
+
+	state, diags := toolServerStateFromEntry(context.Background(), toolServerTestClient(t), entry, toolServerResourceModel{})
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	expected := types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("get_"),
+		types.StringValue("!delete_"),
+	})
+	if !state.FunctionNameFilterList.Equal(expected) {
+		t.Fatalf("expected the split filter list without empty segments, got %v", state.FunctionNameFilterList)
+	}
+}
+
+func TestToolServerStateFromEntryReadsAFilterJSONList(t *testing.T) {
+	entry := client.ToolServerEntry{
+		"url":    "https://paperless.mcp.example",
+		"config": map[string]any{"function_name_filter_list": []any{"get_", "!delete_"}},
+		"info":   map[string]any{"id": "paperless"},
+	}
+
+	state, diags := toolServerStateFromEntry(context.Background(), toolServerTestClient(t), entry, toolServerResourceModel{})
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	expected := types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("get_"),
+		types.StringValue("!delete_"),
+	})
+	if !state.FunctionNameFilterList.Equal(expected) {
+		t.Fatalf("expected the JSON list to read as the same filter list, got %v", state.FunctionNameFilterList)
+	}
+}
+
+func TestToolServerStateFromEntryReadsAnAbsentFilterAsNull(t *testing.T) {
+	cases := []struct {
+		name   string
+		config map[string]any
+	}{
+		{name: "no key", config: map[string]any{}},
+		{name: "empty string", config: map[string]any{"function_name_filter_list": ""}},
+		{name: "empty JSON list", config: map[string]any{"function_name_filter_list": []any{}}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			entry := client.ToolServerEntry{
+				"url":    "https://paperless.mcp.example",
+				"config": tc.config,
+				"info":   map[string]any{"id": "paperless"},
+			}
+
+			state, diags := toolServerStateFromEntry(context.Background(), toolServerTestClient(t), entry, toolServerResourceModel{})
+			if diags.HasError() {
+				t.Fatalf("unexpected diagnostics: %v", diags)
+			}
+
+			if !state.FunctionNameFilterList.IsNull() {
+				t.Fatalf("expected a null filter list, got %v", state.FunctionNameFilterList)
+			}
+		})
+	}
+}
+
+// An empty filter list stores as an empty array and reads back as null.
+// Terraform requires the apply result to match the plan, so the configured
+// empty list survives the round trip.
+func TestToolServerStateFromEntryKeepsAConfiguredEmptyFilterList(t *testing.T) {
+	entry := client.ToolServerEntry{
+		"url":    "https://paperless.mcp.example",
+		"config": map[string]any{"function_name_filter_list": []any{}},
+		"info":   map[string]any{"id": "paperless"},
+	}
+	fallback := toolServerResourceModel{
+		FunctionNameFilterList: types.ListValueMust(types.StringType, []attr.Value{}),
+	}
+
+	state, diags := toolServerStateFromEntry(context.Background(), toolServerTestClient(t), entry, fallback)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if state.FunctionNameFilterList.IsNull() || len(state.FunctionNameFilterList.Elements()) != 0 {
+		t.Fatalf("expected the configured empty list to survive, got %v", state.FunctionNameFilterList)
 	}
 }
 

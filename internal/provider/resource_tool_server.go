@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -48,6 +49,7 @@ type toolServerResourceModel struct {
 	SpecType               types.String `tfsdk:"spec_type"`
 	Spec                   types.String `tfsdk:"spec"`
 	Enabled                types.Bool   `tfsdk:"enabled"`
+	FunctionNameFilterList types.List   `tfsdk:"function_name_filter_list"`
 	Name                   types.String `tfsdk:"name"`
 	Description            types.String `tfsdk:"description"`
 	OAuthScope             types.String `tfsdk:"oauth_scope"`
@@ -195,6 +197,20 @@ func (r *toolServerResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					"server stays registered and offers no tools. Defaults to `true`.",
 				MarkdownDescription: "Whether Open WebUI loads the server. Stored as `config.enable`; a " +
 					"disabled server stays registered and offers no tools. Defaults to `true`.",
+			},
+			"function_name_filter_list": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Description: "Filters the tools the server exposes, matched by name suffix. A plain entry " +
+					"allows every tool whose name ends with it. An entry with a `!` prefix blocks those tools " +
+					"instead. Unset, every tool is exposed. Stored as a list of strings under " +
+					"`config.function_name_filter_list`. The provider also reads the comma-separated string a " +
+					"save from the web UI writes.",
+				MarkdownDescription: "Filters the tools the server exposes, matched by name suffix. A plain " +
+					"entry allows every tool whose name ends with it. An entry with a `!` prefix blocks those " +
+					"tools instead. Unset, every tool is exposed. Stored as a list of strings under " +
+					"`config.function_name_filter_list`. The provider also reads the comma-separated string a " +
+					"save from the web UI writes.",
 			},
 			"name": schema.StringAttribute{
 				Optional: true,
@@ -570,11 +586,14 @@ func toolServerEntryFromPlan(ctx context.Context, apiClient *client.Client, plan
 		enabled = plan.Enabled.ValueBool()
 	}
 
+	filterEntries := expandStringList(ctx, plan.FunctionNameFilterList, path.Root("function_name_filter_list"), diags)
+
 	entry["config"] = map[string]any{
-		"enable":                   enabled,
-		"access_grants":            client.ToolServerAccessGrants(accessControl),
-		"oauth_scope":              toolServerNullable(plan.OAuthScope),
-		"oauth_resource_parameter": toolServerNullable(plan.OAuthResourceParameter),
+		"enable":                    enabled,
+		"access_grants":             client.ToolServerAccessGrants(accessControl),
+		"oauth_scope":               toolServerNullable(plan.OAuthScope),
+		"oauth_resource_parameter":  toolServerNullable(plan.OAuthResourceParameter),
+		"function_name_filter_list": toolServerFilterListToConfig(plan.FunctionNameFilterList, filterEntries),
 	}
 
 	entry["info"] = map[string]any{
@@ -637,6 +656,11 @@ func toolServerStateFromEntry(ctx context.Context, apiClient *client.Client, ent
 
 	enabled, _ := config["enable"].(bool)
 
+	filterList := toolServerFilterListFromConfig(config["function_name_filter_list"])
+	if filterList.IsNull() && toolServerIsKnownEmptyList(fallback.FunctionNameFilterList) {
+		filterList = fallback.FunctionNameFilterList
+	}
+
 	state := toolServerResourceModel{
 		ID:                     types.StringValue(serverID),
 		ServerID:               types.StringValue(serverID),
@@ -649,6 +673,7 @@ func toolServerStateFromEntry(ctx context.Context, apiClient *client.Client, ent
 		SpecType:               toolServerStringValue(entry, "spec_type"),
 		Spec:                   toolServerStringValue(entry, "spec"),
 		Enabled:                types.BoolValue(enabled),
+		FunctionNameFilterList: filterList,
 		Name:                   toolServerStringValue(info, "name"),
 		Description:            toolServerStringValue(info, "description"),
 		OAuthScope:             toolServerPreferredString(info, config, "oauth_scope"),
@@ -696,6 +721,65 @@ func toolServerPreservedJSON(configured, stored types.String) types.String {
 	}
 
 	return configured
+}
+
+// toolServerFilterListToConfig renders the filter list as a JSON array of
+// strings, which Open WebUI reads as-is. A null or unknown attribute returns
+// nil, which removes the stored key and exposes every tool.
+func toolServerFilterListToConfig(value types.List, entries []string) any {
+	if value.IsNull() || value.IsUnknown() {
+		return nil
+	}
+
+	stored := make([]any, 0, len(entries))
+	for _, entry := range entries {
+		stored = append(stored, entry)
+	}
+
+	return stored
+}
+
+// toolServerFilterListFromConfig reads config.function_name_filter_list. The
+// provider stores it as a list of strings, and a save from the web UI
+// rewrites it as one comma-separated string, so both forms read as the same
+// list. An absent or empty value reads as null, so that a connection with no
+// filter stays null in state.
+func toolServerFilterListFromConfig(stored any) types.List {
+	var entries []string
+
+	switch value := stored.(type) {
+	case string:
+		for _, entry := range strings.Split(value, ",") {
+			if entry != "" {
+				entries = append(entries, entry)
+			}
+		}
+	case []any:
+		for _, item := range value {
+			if entry, ok := item.(string); ok && entry != "" {
+				entries = append(entries, entry)
+			}
+		}
+	}
+
+	if len(entries) == 0 {
+		return types.ListNull(types.StringType)
+	}
+
+	values := make([]attr.Value, 0, len(entries))
+	for _, entry := range entries {
+		values = append(values, types.StringValue(entry))
+	}
+
+	return types.ListValueMust(types.StringType, values)
+}
+
+// toolServerIsKnownEmptyList reports whether the operator configured an empty
+// list. An empty filter list stores as an empty array and reads back as
+// null, and Terraform requires the apply result to match the plan, so the
+// caller keeps the configured empty list instead.
+func toolServerIsKnownEmptyList(value types.List) bool {
+	return !value.IsNull() && !value.IsUnknown() && len(value.Elements()) == 0
 }
 
 func toolServerSubObject(entry client.ToolServerEntry, key string) map[string]any {

@@ -157,6 +157,7 @@ variable "invoices_oauth_client_secret" {
 - `auth_type` (String) How Open WebUI authenticates to the server: `none`, `bearer`, `oauth_2.1`, or `oauth_2.1_static`. `bearer` reads `key`. Both OAuth types read the registration in `oauth_client_info` and apply only to MCP servers.
 - `description` (String) Description of an MCP server, stored as `info.description`.
 - `enabled` (Boolean) Whether Open WebUI loads the server. Stored as `config.enable`; a disabled server stays registered and offers no tools. Defaults to `true`.
+- `function_name_filter_list` (List of String) Filters the tools the server exposes, matched by name suffix. A plain entry allows every tool whose name ends with it. An entry with a `!` prefix blocks those tools instead. Unset, every tool is exposed. Stored as a list of strings under `config.function_name_filter_list`. The provider also reads the comma-separated string a save from the web UI writes.
 - `headers_json` (String) JSON object of extra HTTP headers, e.g. `jsonencode({ X-Api-Version = "2" })`.
 - `key` (String, Sensitive) Bearer token sent to the tool server when `auth_type` is `bearer`. Sensitive.
 - `name` (String) Display name of an MCP server, stored as `info.name`. An OpenAPI server takes its name from the fetched spec instead.

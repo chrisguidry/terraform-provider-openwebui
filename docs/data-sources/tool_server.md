@@ -33,6 +33,7 @@ data "openwebui_tool_server" "paperless" {
 - `auth_type` (String) How Open WebUI authenticates to the server.
 - `description` (String) Description of an MCP server.
 - `enabled` (Boolean) Whether Open WebUI loads the server.
+- `function_name_filter_list` (List of String) Tool name filters, matched by suffix. A plain entry allows tools whose names end with it, and a `!` prefix blocks them. Null when every tool is exposed.
 - `headers_json` (String) JSON object of extra HTTP headers.
 - `id` (String) Terraform identifier. Always equal to `server_id`.
 - `key` (String, Sensitive) Bearer token sent to the tool server. Sensitive.

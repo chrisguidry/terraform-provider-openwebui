@@ -31,6 +31,7 @@ type toolServerDataSourceModel struct {
 	HeadersJSON            types.String `tfsdk:"headers_json"`
 	SpecType               types.String `tfsdk:"spec_type"`
 	Enabled                types.Bool   `tfsdk:"enabled"`
+	FunctionNameFilterList types.List   `tfsdk:"function_name_filter_list"`
 	Name                   types.String `tfsdk:"name"`
 	Description            types.String `tfsdk:"description"`
 	OAuthScope             types.String `tfsdk:"oauth_scope"`
@@ -109,6 +110,14 @@ func (d *toolServerDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Computed:            true,
 				Description:         "Whether Open WebUI loads the server.",
 				MarkdownDescription: "Whether Open WebUI loads the server.",
+			},
+			"function_name_filter_list": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: "Tool name filters, matched by suffix. A plain entry allows tools whose names " +
+					"end with it, and a `!` prefix blocks them. Null when every tool is exposed.",
+				MarkdownDescription: "Tool name filters, matched by suffix. A plain entry allows tools whose " +
+					"names end with it, and a `!` prefix blocks them. Null when every tool is exposed.",
 			},
 			"name": schema.StringAttribute{
 				Computed:            true,
@@ -221,6 +230,7 @@ func (d *toolServerDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		HeadersJSON:            state.HeadersJSON,
 		SpecType:               state.SpecType,
 		Enabled:                state.Enabled,
+		FunctionNameFilterList: state.FunctionNameFilterList,
 		Name:                   state.Name,
 		Description:            state.Description,
 		OAuthScope:             state.OAuthScope,
