@@ -59,6 +59,8 @@ func TestToolModelMatchesSchema(t *testing.T) {
 	model := toolResourceModel{
 		ReadGroups:  types.ListNull(types.StringType),
 		WriteGroups: types.ListNull(types.StringType),
+		ReadUsers:   types.ListNull(types.StringType),
+		WriteUsers:  types.ListNull(types.StringType),
 	}
 	if diags := state.Set(ctx, model); diags.HasError() {
 		t.Fatalf("tool resource model does not match its schema: %s", diags)
@@ -68,6 +70,8 @@ func TestToolModelMatchesSchema(t *testing.T) {
 	dataSourceModel := toolDataSourceModel{
 		ReadGroups:  types.ListNull(types.StringType),
 		WriteGroups: types.ListNull(types.StringType),
+		ReadUsers:   types.ListNull(types.StringType),
+		WriteUsers:  types.ListNull(types.StringType),
 	}
 	if diags := dataSourceState.Set(ctx, dataSourceModel); diags.HasError() {
 		t.Fatalf("tool data source model does not match its schema: %s", diags)

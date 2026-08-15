@@ -38,7 +38,9 @@ resource "openwebui_knowledge" "example" {
 - `public_read` (Boolean) When `true`, every signed-in user can read the knowledge base. This is what the Open WebUI interface calls public sharing.
 - `public_write` (Boolean) When `true`, every signed-in user can edit the knowledge base.
 - `read_groups` (List of String) List of group names or IDs granted read access.
+- `read_users` (List of String) List of user email addresses or IDs granted read access.
 - `write_groups` (List of String) List of group names or IDs granted write access. Groups here automatically receive read access too.
+- `write_users` (List of String) List of user email addresses or IDs granted write access. Name the same address in `read_users` as well.
 
 ### Read-Only
 

@@ -59,6 +59,8 @@ func TestPromptModelMatchesSchema(t *testing.T) {
 		Tags:        types.ListNull(types.StringType),
 		ReadGroups:  types.ListNull(types.StringType),
 		WriteGroups: types.ListNull(types.StringType),
+		ReadUsers:   types.ListNull(types.StringType),
+		WriteUsers:  types.ListNull(types.StringType),
 	}
 
 	state := tfsdk.State{Schema: promptResourceSchema(t).Schema}

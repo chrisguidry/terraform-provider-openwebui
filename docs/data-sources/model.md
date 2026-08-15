@@ -44,6 +44,7 @@ data "openwebui_model" "llama" {
 - `public_read` (Boolean) Whether every signed-in user can read the model.
 - `public_write` (Boolean) Whether every signed-in user can edit the model.
 - `read_groups` (List of String) Read-access group names.
+- `read_users` (List of String) Read-access user email addresses.
 - `skill_ids` (List of String) List of skill IDs attached to the model by default.
 - `suggestion_prompts` (List of String) List of suggested starter prompts shown when the model is selected.
 - `tags` (List of String) List of tags for categorising the model.
@@ -51,6 +52,7 @@ data "openwebui_model" "llama" {
 - `updated_at` (Number) Unix timestamp of when the model was last updated.
 - `user_id` (String) UUID of the Open WebUI account that owns this object.
 - `write_groups` (List of String) Write-access group names.
+- `write_users` (List of String) Write-access user email addresses.
 
 <a id="nestedatt--capabilities"></a>
 ### Nested Schema for `capabilities`

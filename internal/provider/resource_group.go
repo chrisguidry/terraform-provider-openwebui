@@ -426,7 +426,13 @@ func lookupUserID(ctx context.Context, apiClient *client.Client, identifier stri
 	}
 
 	if len(users) == 0 {
-		return "", fmt.Errorf("no matching users found")
+		// The search route matches a name, a mail address, and a username, so a
+		// user ID finds nothing. Read the account directly instead.
+		user, getErr := apiClient.GetUser(ctx, identifier)
+		if getErr != nil {
+			return "", fmt.Errorf("no matching users found")
+		}
+		return user.ID, nil
 	}
 
 	// Prefer exact matches on email, username, or name.
@@ -459,40 +465,13 @@ func lookupUserID(ctx context.Context, apiClient *client.Client, identifier stri
 	return users[0].ID, nil
 }
 
+// fetchUsernamesForIDs names the members of a group. Membership is a set, so
+// the names are sorted and a config that lists them in another order still
+// matches the state.
 func fetchUsernamesForIDs(ctx context.Context, apiClient *client.Client, ids []string) ([]string, diag.Diagnostics) {
-	names := make([]string, 0, len(ids))
-	var diags diag.Diagnostics
-
-	for _, id := range ids {
-		user, err := apiClient.GetUser(ctx, id)
-		if err != nil {
-			if err == client.ErrNotFound {
-				continue
-			}
-			diags.AddError(
-				"Fetch user failed",
-				fmt.Sprintf("Failed to retrieve user %s: %v", id, err),
-			)
-			continue
-		}
-
-		label := user.Email
-		if label == "" {
-			if user.Username != nil && *user.Username != "" {
-				label = *user.Username
-			} else {
-				label = user.Name
-			}
-		}
-
-		if label == "" {
-			label = id
-		}
-
-		names = append(names, label)
-	}
-
+	names, diags := fetchUserEmailsForIDs(ctx, apiClient, ids)
 	sort.Strings(names)
+
 	return names, diags
 }
 

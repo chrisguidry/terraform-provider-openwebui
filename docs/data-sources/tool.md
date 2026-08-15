@@ -37,8 +37,10 @@ data "openwebui_tool" "scraper" {
 - `public_read` (Boolean) Whether every signed-in user can read the tool.
 - `public_write` (Boolean) Whether every signed-in user can edit the tool.
 - `read_groups` (List of String) Read-access group names currently applied to this tool.
+- `read_users` (List of String) Read-access user email addresses currently applied to this tool.
 - `specs_json` (String) JSON OpenAPI-style specification of the tool's functions.
 - `updated_at` (Number) Unix timestamp of last update.
 - `user_id` (String) UUID of the Open WebUI account that owns this object.
 - `write_access` (Boolean) Whether the authenticated user has write access.
 - `write_groups` (List of String) Write-access group names currently applied to this tool.
+- `write_users` (List of String) Write-access user email addresses currently applied to this tool.

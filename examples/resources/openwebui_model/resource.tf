@@ -8,6 +8,10 @@ resource "openwebui_model" "example" {
   read_groups  = ["Support"]
   write_groups = ["Support"]
 
+  # A grant can also name one account. Write the mail address the account signs
+  # in with, or its user ID.
+  read_users = ["contractor@example.com"]
+
   # Skills the model loads with every conversation, by skill_id.
   skill_ids = ["code-review"]
 

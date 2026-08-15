@@ -45,6 +45,8 @@ type skillResourceModel struct {
 	IsActive    types.Bool   `tfsdk:"is_active"`
 	ReadGroups  types.List   `tfsdk:"read_groups"`
 	WriteGroups types.List   `tfsdk:"write_groups"`
+	ReadUsers   types.List   `tfsdk:"read_users"`
+	WriteUsers  types.List   `tfsdk:"write_users"`
 	PublicRead  types.Bool   `tfsdk:"public_read"`
 	PublicWrite types.Bool   `tfsdk:"public_write"`
 	UserID      types.String `tfsdk:"user_id"`
@@ -132,6 +134,22 @@ func (r *skillResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Computed:            true,
 				Description:         "List of group names or IDs granted write access.",
 				MarkdownDescription: "List of group names or IDs granted write access.",
+				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"read_users": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "List of user email addresses or IDs granted read access.",
+				MarkdownDescription: "List of user email addresses or IDs granted read access.",
+				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"write_users": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "List of user email addresses or IDs granted write access. Name the same address in `read_users` as well.",
+				MarkdownDescription: "List of user email addresses or IDs granted write access. Name the same address in `read_users` as well.",
 				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"public_read": schema.BoolAttribute{
@@ -344,16 +362,18 @@ func skillFormFromPlan(ctx context.Context, apiClient *client.Client, plan skill
 
 	tags := expandStringList(ctx, plan.Tags, path.Root("tags"), &diags)
 
-	readNames := expandStringList(ctx, plan.ReadGroups, path.Root("read_groups"), &diags)
-	writeNames := expandStringList(ctx, plan.WriteGroups, path.Root("write_groups"), &diags)
-	readIDs := resolveGroupNamesToIDs(ctx, apiClient, readNames, path.Root("read_groups"), &diags)
-	writeIDs := resolveGroupNamesToIDs(ctx, apiClient, writeNames, path.Root("write_groups"), &diags)
+	principals := resolveAccessPrincipals(ctx, apiClient, accessPrincipalLists{
+		ReadGroups:  plan.ReadGroups,
+		WriteGroups: plan.WriteGroups,
+		ReadUsers:   plan.ReadUsers,
+		WriteUsers:  plan.WriteUsers,
+	}, &diags)
 
 	// An unset public-sharing flag means the skill is not shared.
 	publicRead := !plan.PublicRead.IsNull() && !plan.PublicRead.IsUnknown() && plan.PublicRead.ValueBool()
 	publicWrite := !plan.PublicWrite.IsNull() && !plan.PublicWrite.IsUnknown() && plan.PublicWrite.ValueBool()
 
-	accessControl := withPublicAccess(buildAccessControl(readIDs, writeIDs), publicRead, publicWrite)
+	accessControl := withPublicAccess(buildAccessControl(principals), publicRead, publicWrite)
 
 	return client.SkillForm{
 		ID:            plan.SkillID.ValueString(),
@@ -374,18 +394,8 @@ func skillResponseToModel(ctx context.Context, apiClient *client.Client, access 
 		return skillResourceModel{}, diags
 	}
 
-	readIDs := extractGroupIDsFromAccessControl(access.AccessControl, "read")
-	writeIDs := extractGroupIDsFromAccessControl(access.AccessControl, "write")
-
-	readNames, readDiags := fetchGroupNamesForIDs(ctx, apiClient, readIDs)
-	diags.Append(readDiags...)
-	writeNames, writeDiags := fetchGroupNamesForIDs(ctx, apiClient, writeIDs)
-	diags.Append(writeDiags...)
-
-	readList, readListDiags := flattenStringSlice(ctx, readNames)
-	diags.Append(readListDiags...)
-	writeList, writeListDiags := flattenStringSlice(ctx, writeNames)
-	diags.Append(writeListDiags...)
+	shared, sharedDiags := flattenAccessPrincipals(ctx, apiClient, access.AccessControl)
+	diags.Append(sharedDiags...)
 
 	tagList, tagDiags := flattenStringSlice(ctx, access.Meta.Tags)
 	diags.Append(tagDiags...)
@@ -410,8 +420,10 @@ func skillResponseToModel(ctx context.Context, apiClient *client.Client, access 
 		Content:     contentValue,
 		Tags:        tagList,
 		IsActive:    types.BoolValue(access.IsActive),
-		ReadGroups:  readList,
-		WriteGroups: writeList,
+		ReadGroups:  shared.ReadGroups,
+		WriteGroups: shared.WriteGroups,
+		ReadUsers:   shared.ReadUsers,
+		WriteUsers:  shared.WriteUsers,
 		PublicRead:  types.BoolValue(publicAccessFromControl(access.AccessControl, "read")),
 		PublicWrite: types.BoolValue(publicAccessFromControl(access.AccessControl, "write")),
 		UserID:      types.StringValue(access.UserID),

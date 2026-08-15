@@ -29,6 +29,8 @@ type toolDataSourceModel struct {
 	ManifestJSON  types.String `tfsdk:"manifest_json"`
 	ReadGroups    types.List   `tfsdk:"read_groups"`
 	WriteGroups   types.List   `tfsdk:"write_groups"`
+	ReadUsers     types.List   `tfsdk:"read_users"`
+	WriteUsers    types.List   `tfsdk:"write_users"`
 	PublicRead    types.Bool   `tfsdk:"public_read"`
 	PublicWrite   types.Bool   `tfsdk:"public_write"`
 	SpecsJSON     types.String `tfsdk:"specs_json"`
@@ -95,6 +97,18 @@ func (d *toolDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Computed:            true,
 				Description:         "Write-access group names currently applied to this tool.",
 				MarkdownDescription: "Write-access group names currently applied to this tool.",
+			},
+			"read_users": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Computed:            true,
+				Description:         "Read-access user email addresses currently applied to this tool.",
+				MarkdownDescription: "Read-access user email addresses currently applied to this tool.",
+			},
+			"write_users": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Computed:            true,
+				Description:         "Write-access user email addresses currently applied to this tool.",
+				MarkdownDescription: "Write-access user email addresses currently applied to this tool.",
 			},
 			"public_read": schema.BoolAttribute{
 				Computed:            true,

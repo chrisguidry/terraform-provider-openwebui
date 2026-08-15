@@ -61,8 +61,10 @@ resource "openwebui_skill" "release_notes" {
 - `public_read` (Boolean) Whether every signed-in user can read the skill. This is the sharing the web UI calls public.
 - `public_write` (Boolean) Whether every signed-in user can edit the skill.
 - `read_groups` (List of String) List of group names or IDs granted read access.
+- `read_users` (List of String) List of user email addresses or IDs granted read access.
 - `tags` (List of String) List of tags for categorising the skill.
 - `write_groups` (List of String) List of group names or IDs granted write access.
+- `write_users` (List of String) List of user email addresses or IDs granted write access. Name the same address in `read_users` as well.
 
 ### Read-Only
 

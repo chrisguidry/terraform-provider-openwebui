@@ -39,8 +39,10 @@ resource "openwebui_prompt" "example" {
 - `public_read` (Boolean) When `true`, every signed-in user can read the prompt. This is what the Open WebUI interface calls public sharing.
 - `public_write` (Boolean) When `true`, every signed-in user can edit the prompt.
 - `read_groups` (List of String) List of group names or IDs granted read access.
+- `read_users` (List of String) List of user email addresses or IDs granted read access.
 - `tags` (List of String) List of tags for categorising the prompt.
 - `write_groups` (List of String) List of group names or IDs granted write access.
+- `write_users` (List of String) List of user email addresses or IDs granted write access. Name the same address in `read_users` as well.
 
 ### Read-Only
 

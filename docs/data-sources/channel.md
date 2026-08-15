@@ -37,6 +37,8 @@ data "openwebui_channel" "announcements" {
 - `public_read` (Boolean) Whether every signed-in user can read the channel.
 - `public_write` (Boolean) Whether every signed-in user can post in the channel.
 - `read_groups` (List of String) Names of the groups whose members can read the channel.
+- `read_users` (List of String) Email addresses of the users who can read the channel.
 - `updated_at` (Number) Last update timestamp in nanoseconds.
 - `user_id` (String) Identifier of the account that created the channel.
 - `write_groups` (List of String) Names of the groups whose members can post in the channel.
+- `write_users` (List of String) Email addresses of the users who can post in the channel.

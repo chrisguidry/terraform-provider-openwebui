@@ -39,6 +39,8 @@ type toolServerDataSourceModel struct {
 	OAuthClientID          types.String `tfsdk:"oauth_client_id"`
 	ReadGroups             types.List   `tfsdk:"read_groups"`
 	WriteGroups            types.List   `tfsdk:"write_groups"`
+	ReadUsers              types.List   `tfsdk:"read_users"`
+	WriteUsers             types.List   `tfsdk:"write_users"`
 	PublicRead             types.Bool   `tfsdk:"public_read"`
 	PublicWrite            types.Bool   `tfsdk:"public_write"`
 }
@@ -156,6 +158,18 @@ func (d *toolServerDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Description:         "Group names granted write access to the server's tools.",
 				MarkdownDescription: "Group names granted write access to the server's tools.",
 			},
+			"read_users": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Computed:            true,
+				Description:         "User email addresses granted read access to the server's tools.",
+				MarkdownDescription: "User email addresses granted read access to the server's tools.",
+			},
+			"write_users": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Computed:            true,
+				Description:         "User email addresses granted write access to the server's tools.",
+				MarkdownDescription: "User email addresses granted write access to the server's tools.",
+			},
 			"public_read": schema.BoolAttribute{
 				Computed:            true,
 				Description:         "Whether every signed-in user can use the server's tools.",
@@ -238,6 +252,8 @@ func (d *toolServerDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		OAuthClientID:          state.OAuthClientID,
 		ReadGroups:             state.ReadGroups,
 		WriteGroups:            state.WriteGroups,
+		ReadUsers:              state.ReadUsers,
+		WriteUsers:             state.WriteUsers,
 		PublicRead:             state.PublicRead,
 		PublicWrite:            state.PublicWrite,
 	}

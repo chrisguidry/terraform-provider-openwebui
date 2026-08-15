@@ -22,6 +22,14 @@ type fakeChannelAPI struct {
 	nextID   int
 }
 
+// fakeChannelUsers are the accounts the fake API knows. The search route
+// matches a mail address, so a user ID reaches an account only through the
+// account route.
+var fakeChannelUsers = map[string]string{
+	"u1": "parent@example.com",
+	"u2": "kid@example.com",
+}
+
 func newFakeChannelAPI(t *testing.T) *httptest.Server {
 	t.Helper()
 	api := &fakeChannelAPI{channels: map[string]map[string]any{}}
@@ -38,8 +46,26 @@ func (a *fakeChannelAPI) serve(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	switch {
+	case path == "users/":
+		query := strings.ToLower(r.URL.Query().Get("query"))
+		matches := []string{}
+		for id, email := range fakeChannelUsers {
+			if query != "" && !strings.Contains(email, query) {
+				continue
+			}
+			matches = append(matches, fmt.Sprintf(`{"id":%q,"name":"Account","email":%q,"role":"user","last_active_at":1,"updated_at":2,"created_at":3}`, id, email))
+		}
+		_, _ = fmt.Fprintf(w, `{"users":[%s],"total":%d}`, strings.Join(matches, ","), len(matches))
+	case strings.HasPrefix(path, "users/"):
+		id := strings.TrimPrefix(path, "users/")
+		email, ok := fakeChannelUsers[id]
+		if !ok {
+			http.Error(w, `{"detail":"not found"}`, http.StatusNotFound)
+			return
+		}
+		_, _ = fmt.Fprintf(w, `{"id":%q,"name":"Account","email":%q,"role":"user","last_active_at":1,"updated_at":2,"created_at":3}`, id, email)
 	case path == "groups/":
-		_, _ = w.Write([]byte(`[{"id":"g1","name":"family","description":"","user_ids":[]}]`))
+		_, _ = w.Write([]byte(`[{"id":"g1","name":"family","description":"","user_ids":[]},{"id":"g2","name":"parents","description":"","user_ids":[]}]`))
 	case path == "channels/create":
 		var form map[string]any
 		if err := json.NewDecoder(r.Body).Decode(&form); err != nil {
@@ -204,6 +230,146 @@ data "openwebui_channel" "found" {
 					resource.TestCheckResourceAttr("data.openwebui_channel.found", "description", "House news"),
 					resource.TestCheckResourceAttr("data.openwebui_channel.found", "read_groups.0", "family"),
 					resource.TestCheckResourceAttr("data.openwebui_channel.found", "public_read", "true"),
+				),
+			},
+		},
+	})
+}
+
+func testChannelUserGrantConfig(endpoint, grants string) string {
+	return fmt.Sprintf(`%s
+resource "openwebui_channel" "test" {
+  name        = "announcements"
+  description = "House news"
+%s
+}
+`, testChannelProviderConfig(endpoint), grants)
+}
+
+// A mail address in the configuration becomes a user grant, and the read-back
+// names the same address rather than the ID Open WebUI stores.
+func TestChannelResource_ReadUsers(t *testing.T) {
+	server := newFakeChannelAPI(t)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testChannelUserGrantConfig(server.URL, `  read_users = ["parent@example.com"]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.#", "1"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.0", "parent@example.com"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "write_users.#", "0"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "public_read", "false"),
+				),
+			},
+			{
+				ResourceName:      "openwebui_channel.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				// read_users is Optional and Computed, so an empty list is the
+				// only way to revoke the grant.
+				Config: testChannelUserGrantConfig(server.URL, `  read_users = []`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+// A user named for writing can read the channel too, so the grant appears in
+// both lists.
+func TestChannelResource_WriteUsersImplyRead(t *testing.T) {
+	server := newFakeChannelAPI(t)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testChannelUserGrantConfig(server.URL, `  write_users = ["kid@example.com"]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_channel.test", "write_users.#", "1"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "write_users.0", "kid@example.com"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.#", "1"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.0", "kid@example.com"),
+				),
+			},
+		},
+	})
+}
+
+// Group grants and user grants land on one channel without either one losing
+// the other.
+func TestChannelResource_GroupAndUserGrantsTogether(t *testing.T) {
+	server := newFakeChannelAPI(t)
+
+	grants := `  read_groups = ["family"]
+  read_users  = ["parent@example.com", "kid@example.com"]`
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testChannelUserGrantConfig(server.URL, grants),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_groups.#", "1"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_groups.0", "family"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.#", "2"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.0", "parent@example.com"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.1", "kid@example.com"),
+				),
+			},
+		},
+	})
+}
+
+// The data source reports the user grants a channel carries.
+func TestChannelDataSource_ReportsUserGrants(t *testing.T) {
+	server := newFakeChannelAPI(t)
+
+	config := testChannelUserGrantConfig(server.URL, `  read_users = ["parent@example.com"]`) + `
+data "openwebui_channel" "found" {
+  channel_id = openwebui_channel.test.id
+}
+`
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.openwebui_channel.found", "read_users.#", "1"),
+					resource.TestCheckResourceAttr("data.openwebui_channel.found", "read_users.0", "parent@example.com"),
+				),
+			},
+		},
+	})
+}
+
+// A configuration that names one account for reading and another for writing
+// has to name the writer in read_users too, because Open WebUI stores a read
+// grant for every writer.
+func TestChannelResource_ReadUsersNamesEveryWriter(t *testing.T) {
+	server := newFakeChannelAPI(t)
+
+	grants := `  read_users  = ["parent@example.com", "kid@example.com"]
+  write_users = ["kid@example.com"]`
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testChannelUserGrantConfig(server.URL, grants),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.#", "2"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.0", "parent@example.com"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.1", "kid@example.com"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "write_users.#", "1"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "write_users.0", "kid@example.com"),
 				),
 			},
 		},

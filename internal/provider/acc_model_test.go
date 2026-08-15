@@ -222,3 +222,62 @@ data "openwebui_model" "test" {
 }
 `, testAccProviderConfig(), modelID)
 }
+
+// A model shared with one account for reading and one for writing. A user named
+// for writing reads the model too, so both lists name that account. Mutates the
+// target Open WebUI instance.
+func TestAccModelResource_UserGrants(t *testing.T) {
+	modelID := acctest.RandomWithPrefix("tf-acc-model-users")
+	email := fmt.Sprintf("%s@example.com", acctest.RandomWithPrefix("tf-acc-model-editor"))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccModelWithUserConfig(modelID, email, `[openwebui_user.editor.email]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_model.test", "write_users.#", "1"),
+					resource.TestCheckResourceAttr("openwebui_model.test", "write_users.0", email),
+					resource.TestCheckResourceAttr("openwebui_model.test", "read_users.#", "1"),
+					resource.TestCheckResourceAttr("openwebui_model.test", "read_users.0", email),
+					resource.TestCheckResourceAttr("openwebui_model.test", "public_read", "false"),
+				),
+			},
+			{
+				ResourceName:      "openwebui_model.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccModelWithUserConfig(modelID, email, `[]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_model.test", "write_users.#", "0"),
+					resource.TestCheckResourceAttr("openwebui_model.test", "read_users.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func testAccModelWithUserConfig(modelID, email, writeUsers string) string {
+	return fmt.Sprintf(`%s
+resource "openwebui_user" "editor" {
+  name             = "Model Editor"
+  email            = %q
+  role             = "user"
+  password         = "correct-horse-battery"
+  password_version = "1"
+}
+
+resource "openwebui_model" "test" {
+  model_id      = %q
+  name          = "Shared Model"
+  base_model_id = "llama3.2"
+
+  params = {}
+
+  write_users = %s
+}
+`, testAccProviderConfig(), email, modelID, writeUsers)
+}

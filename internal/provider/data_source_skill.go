@@ -30,6 +30,8 @@ type skillDataSourceModel struct {
 	IsActive    types.Bool   `tfsdk:"is_active"`
 	ReadGroups  types.List   `tfsdk:"read_groups"`
 	WriteGroups types.List   `tfsdk:"write_groups"`
+	ReadUsers   types.List   `tfsdk:"read_users"`
+	WriteUsers  types.List   `tfsdk:"write_users"`
 	PublicRead  types.Bool   `tfsdk:"public_read"`
 	PublicWrite types.Bool   `tfsdk:"public_write"`
 	UserID      types.String `tfsdk:"user_id"`
@@ -100,6 +102,18 @@ func (d *skillDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				Computed:            true,
 				Description:         "Write-access group names currently applied to this skill.",
 				MarkdownDescription: "Write-access group names currently applied to this skill.",
+			},
+			"read_users": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Computed:            true,
+				Description:         "Read-access user email addresses currently applied to this skill.",
+				MarkdownDescription: "Read-access user email addresses currently applied to this skill.",
+			},
+			"write_users": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Computed:            true,
+				Description:         "Write-access user email addresses currently applied to this skill.",
+				MarkdownDescription: "Write-access user email addresses currently applied to this skill.",
 			},
 			"public_read": schema.BoolAttribute{
 				Computed:            true,
@@ -198,6 +212,8 @@ func (d *skillDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		IsActive:    skill.IsActive,
 		ReadGroups:  skill.ReadGroups,
 		WriteGroups: skill.WriteGroups,
+		ReadUsers:   skill.ReadUsers,
+		WriteUsers:  skill.WriteUsers,
 		PublicRead:  skill.PublicRead,
 		PublicWrite: skill.PublicWrite,
 		UserID:      skill.UserID,

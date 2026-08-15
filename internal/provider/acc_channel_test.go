@@ -98,3 +98,60 @@ resource "openwebui_channel" "test" {
 }
 `, testAccProviderConfig(), name, description)
 }
+
+// A channel shared with one account by its mail address. The read-back names
+// the same address, so a second plan is empty. Mutates the target Open WebUI
+// instance.
+func TestAccChannelResource_UserGrants(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-channel-users")
+	email := fmt.Sprintf("%s@example.com", acctest.RandomWithPrefix("tf-acc-channel-member"))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccChannelWithUserConfig(name, email, `[openwebui_user.member.email]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.#", "1"),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.0", email),
+					resource.TestCheckResourceAttr("openwebui_channel.test", "public_read", "false"),
+				),
+			},
+			{
+				// read_users is Optional and Computed, so an empty list is the
+				// only way to revoke the grant. Dropping the attribute keeps the
+				// value that is already in state.
+				Config: testAccChannelWithUserConfig(name, email, `[]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openwebui_channel.test", "read_users.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func testAccChannelWithUserConfig(name, email, readUsers string) string {
+	return fmt.Sprintf(`%s
+resource "openwebui_admin_config" "channels" {
+  enable_channels = true
+}
+
+resource "openwebui_user" "member" {
+  name             = "Channel Member"
+  email            = %q
+  role             = "user"
+  password         = "correct-horse-battery"
+  password_version = "1"
+}
+
+resource "openwebui_channel" "test" {
+  name        = %q
+  description = "Shared with one account"
+  is_private  = false
+  read_users  = %s
+
+  depends_on = [openwebui_admin_config.channels]
+}
+`, testAccProviderConfig(), email, name, readUsers)
+}

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0] - 2026-08-15
+
+### Features
+
+- Add `read_users` and `write_users` to the channel, knowledge, model, prompt,
+  skill, tool, and tool server resources and data sources. A grant now names one
+  account by its mail address or its user ID, alongside the group grants.
+
 ## [1.1.0] - 2026-06-09
 
 ### Bug Fixes

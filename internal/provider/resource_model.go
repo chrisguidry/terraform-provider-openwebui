@@ -48,6 +48,8 @@ type modelResourceModel struct {
 	ParamsAdditionalJSON types.String            `tfsdk:"params_additional_json"`
 	ReadGroups           types.List              `tfsdk:"read_groups"`
 	WriteGroups          types.List              `tfsdk:"write_groups"`
+	ReadUsers            types.List              `tfsdk:"read_users"`
+	WriteUsers           types.List              `tfsdk:"write_users"`
 	PublicRead           types.Bool              `tfsdk:"public_read"`
 	PublicWrite          types.Bool              `tfsdk:"public_write"`
 	ProfileImageURL      types.String            `tfsdk:"profile_image_url"`
@@ -199,7 +201,7 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				ElementType:   types.StringType,
 				Optional:      true,
 				Computed:      true,
-				Description:   "List of group names or IDs granted read access. With no groups and neither `public_read` nor `public_write`, the model is visible to its owner and to admins only.",
+				Description:   "List of group names or IDs granted read access. With no groups, no users, and neither `public_read` nor `public_write`, the model is visible to its owner and to admins only.",
 				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"write_groups": schema.ListAttribute{
@@ -207,6 +209,20 @@ func (r *modelResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:      true,
 				Computed:      true,
 				Description:   "List of group names or IDs granted write access.",
+				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"read_users": schema.ListAttribute{
+				ElementType:   types.StringType,
+				Optional:      true,
+				Computed:      true,
+				Description:   "List of user email addresses or IDs granted read access.",
+				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"write_users": schema.ListAttribute{
+				ElementType:   types.StringType,
+				Optional:      true,
+				Computed:      true,
+				Description:   "List of user email addresses or IDs granted write access. Name the same address in `read_users` as well.",
 				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"public_read": schema.BoolAttribute{
@@ -464,11 +480,13 @@ func (r *modelResource) Create(ctx context.Context, req resource.CreateRequest, 
 		Params: copyStringAnyMap(paramsMap),
 	}
 
-	readNames := expandStringList(ctx, plan.ReadGroups, path.Root("read_groups"), &resp.Diagnostics)
-	writeNames := expandStringList(ctx, plan.WriteGroups, path.Root("write_groups"), &resp.Diagnostics)
-	readIDs := resolveGroupNamesToIDs(ctx, r.client, readNames, path.Root("read_groups"), &resp.Diagnostics)
-	writeIDs := resolveGroupNamesToIDs(ctx, r.client, writeNames, path.Root("write_groups"), &resp.Diagnostics)
-	form.AccessControl = withPublicAccess(buildAccessControl(readIDs, writeIDs), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
+	principals := resolveAccessPrincipals(ctx, r.client, accessPrincipalLists{
+		ReadGroups:  plan.ReadGroups,
+		WriteGroups: plan.WriteGroups,
+		ReadUsers:   plan.ReadUsers,
+		WriteUsers:  plan.WriteUsers,
+	}, &resp.Diagnostics)
+	form.AccessControl = withPublicAccess(buildAccessControl(principals), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
 
 	if !plan.BaseModelID.IsNull() && !plan.BaseModelID.IsUnknown() && plan.BaseModelID.ValueString() != "" {
 		base := plan.BaseModelID.ValueString()
@@ -576,11 +594,13 @@ func (r *modelResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		Params: copyStringAnyMap(paramsMap),
 	}
 
-	readNames := expandStringList(ctx, plan.ReadGroups, path.Root("read_groups"), &resp.Diagnostics)
-	writeNames := expandStringList(ctx, plan.WriteGroups, path.Root("write_groups"), &resp.Diagnostics)
-	readIDs := resolveGroupNamesToIDs(ctx, r.client, readNames, path.Root("read_groups"), &resp.Diagnostics)
-	writeIDs := resolveGroupNamesToIDs(ctx, r.client, writeNames, path.Root("write_groups"), &resp.Diagnostics)
-	form.AccessControl = withPublicAccess(buildAccessControl(readIDs, writeIDs), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
+	principals := resolveAccessPrincipals(ctx, r.client, accessPrincipalLists{
+		ReadGroups:  plan.ReadGroups,
+		WriteGroups: plan.WriteGroups,
+		ReadUsers:   plan.ReadUsers,
+		WriteUsers:  plan.WriteUsers,
+	}, &resp.Diagnostics)
+	form.AccessControl = withPublicAccess(buildAccessControl(principals), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
 
 	if !plan.BaseModelID.IsNull() && !plan.BaseModelID.IsUnknown() && plan.BaseModelID.ValueString() != "" {
 		base := plan.BaseModelID.ValueString()
@@ -655,18 +675,8 @@ func modelResponseToModel(ctx context.Context, apiClient *client.Client, resp *c
 	metaState, metaAdditional, metaDiags := flattenModelMeta(ctx, resp.Meta)
 	diags.Append(metaDiags...)
 
-	readIDs := extractGroupIDsFromAccessControl(resp.AccessControl, "read")
-	writeIDs := extractGroupIDsFromAccessControl(resp.AccessControl, "write")
-
-	readNames, readDiags := fetchGroupNamesForIDs(ctx, apiClient, readIDs)
-	diags.Append(readDiags...)
-	writeNames, writeDiags := fetchGroupNamesForIDs(ctx, apiClient, writeIDs)
-	diags.Append(writeDiags...)
-
-	readList, readListDiags := flattenStringSlice(ctx, readNames)
-	diags.Append(readListDiags...)
-	writeList, writeListDiags := flattenStringSlice(ctx, writeNames)
-	diags.Append(writeListDiags...)
+	shared, sharedDiags := flattenAccessPrincipals(ctx, apiClient, resp.AccessControl)
+	diags.Append(sharedDiags...)
 
 	state := modelResourceModel{
 		ID:                   types.StringValue(resp.ID),
@@ -679,8 +689,10 @@ func modelResponseToModel(ctx context.Context, apiClient *client.Client, resp *c
 		Params:               paramsModel,
 		ParamsAdditionalJSON: paramsAdditional,
 		MetaAdditionalJSON:   metaAdditional,
-		ReadGroups:           readList,
-		WriteGroups:          writeList,
+		ReadGroups:           shared.ReadGroups,
+		WriteGroups:          shared.WriteGroups,
+		ReadUsers:            shared.ReadUsers,
+		WriteUsers:           shared.WriteUsers,
 		PublicRead:           types.BoolValue(publicAccessFromControl(resp.AccessControl, "read")),
 		PublicWrite:          types.BoolValue(publicAccessFromControl(resp.AccessControl, "write")),
 		ProfileImageURL:      metaState.ProfileImageURL,

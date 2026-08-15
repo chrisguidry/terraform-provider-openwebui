@@ -35,6 +35,8 @@ type channelDataSourceModel struct {
 	MetaJSON    types.String `tfsdk:"meta_json"`
 	ReadGroups  types.List   `tfsdk:"read_groups"`
 	WriteGroups types.List   `tfsdk:"write_groups"`
+	ReadUsers   types.List   `tfsdk:"read_users"`
+	WriteUsers  types.List   `tfsdk:"write_users"`
 	PublicRead  types.Bool   `tfsdk:"public_read"`
 	PublicWrite types.Bool   `tfsdk:"public_write"`
 	UserID      types.String `tfsdk:"user_id"`
@@ -95,6 +97,16 @@ func (d *channelDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				ElementType: types.StringType,
 				Computed:    true,
 				Description: "Names of the groups whose members can post in the channel.",
+			},
+			"read_users": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: "Email addresses of the users who can read the channel.",
+			},
+			"write_users": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: "Email addresses of the users who can post in the channel.",
 			},
 			"public_read": schema.BoolAttribute{
 				Computed:    true,
@@ -199,18 +211,8 @@ func (d *channelDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		}
 	}
 
-	readIDs := extractGroupIDsFromAccessControl(channel.AccessControl, "read")
-	writeIDs := extractGroupIDsFromAccessControl(channel.AccessControl, "write")
-
-	readNames, readDiags := fetchGroupNamesForIDs(ctx, d.client, readIDs)
-	resp.Diagnostics.Append(readDiags...)
-	writeNames, writeDiags := fetchGroupNamesForIDs(ctx, d.client, writeIDs)
-	resp.Diagnostics.Append(writeDiags...)
-
-	readList, readListDiags := flattenStringSlice(ctx, readNames)
-	resp.Diagnostics.Append(readListDiags...)
-	writeList, writeListDiags := flattenStringSlice(ctx, writeNames)
-	resp.Diagnostics.Append(writeListDiags...)
+	shared, sharedDiags := flattenAccessPrincipals(ctx, d.client, channel.AccessControl)
+	resp.Diagnostics.Append(sharedDiags...)
 
 	dataJSON, dataErr := encodeOptionalJSON(channel.Data)
 	if dataErr != nil {
@@ -243,8 +245,10 @@ func (d *channelDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		IsPrivate:   isPrivate,
 		DataJSON:    dataJSON,
 		MetaJSON:    metaJSON,
-		ReadGroups:  readList,
-		WriteGroups: writeList,
+		ReadGroups:  shared.ReadGroups,
+		WriteGroups: shared.WriteGroups,
+		ReadUsers:   shared.ReadUsers,
+		WriteUsers:  shared.WriteUsers,
 		PublicRead:  types.BoolValue(publicAccessFromControl(channel.AccessControl, "read")),
 		PublicWrite: types.BoolValue(publicAccessFromControl(channel.AccessControl, "write")),
 		UserID:      types.StringValue(channel.UserID),

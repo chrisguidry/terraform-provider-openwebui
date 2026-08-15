@@ -36,7 +36,9 @@ data "openwebui_prompt" "summarize" {
 - `public_read` (Boolean) Whether every signed-in user can read the prompt.
 - `public_write` (Boolean) Whether every signed-in user can edit the prompt.
 - `read_groups` (List of String) Read-access group names currently applied to this prompt.
+- `read_users` (List of String) Read-access user email addresses currently applied to this prompt.
 - `tags` (List of String) List of tags for categorising the prompt.
 - `updated_at` (String) Last-updated date in `YYYY-MM-DD` format.
 - `user_id` (String) UUID of the Open WebUI account that owns this object.
 - `write_groups` (List of String) Write-access group names currently applied to this prompt.
+- `write_users` (List of String) Write-access user email addresses currently applied to this prompt.

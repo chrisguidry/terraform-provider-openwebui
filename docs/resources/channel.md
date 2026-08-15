@@ -25,6 +25,16 @@ resource "openwebui_channel" "announcements" {
   write_groups = ["Parents"]
 }
 
+# A channel shared with two accounts by name. An account that posts also reads,
+# so read_users names both.
+resource "openwebui_channel" "planning" {
+  name        = "planning"
+  description = "Trip planning"
+
+  read_users  = ["grandma@example.com", "parent@example.com"]
+  write_users = ["parent@example.com"]
+}
+
 # A channel every signed-in user can read and post in.
 resource "openwebui_channel" "watercooler" {
   name         = "watercooler"
@@ -50,7 +60,9 @@ resource "openwebui_channel" "watercooler" {
 - `public_read` (Boolean) Whether every signed-in user can read the channel. This is the sharing the web UI calls public.
 - `public_write` (Boolean) Whether every signed-in user can post in the channel.
 - `read_groups` (List of String) List of group names or IDs whose members can read the channel.
+- `read_users` (List of String) List of user email addresses or IDs allowed to read the channel.
 - `write_groups` (List of String) List of group names or IDs whose members can post in the channel.
+- `write_users` (List of String) List of user email addresses or IDs allowed to post in the channel. Name the same address in `read_users` as well.
 
 ### Read-Only
 

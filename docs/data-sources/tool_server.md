@@ -45,7 +45,9 @@ data "openwebui_tool_server" "paperless" {
 - `public_read` (Boolean) Whether every signed-in user can use the server's tools.
 - `public_write` (Boolean) Whether every signed-in user can manage the server's tools.
 - `read_groups` (List of String) Group names granted read access to the server's tools.
+- `read_users` (List of String) User email addresses granted read access to the server's tools.
 - `spec_type` (String) Where an OpenAPI server's spec comes from.
 - `type` (String) Tool server type, `openapi` or `mcp`.
 - `url` (String) Base URL of the tool server.
 - `write_groups` (List of String) Group names granted write access to the server's tools.
+- `write_users` (List of String) User email addresses granted write access to the server's tools.

@@ -289,6 +289,8 @@ func TestSkillFormFromPlan_CarriesPublicGrants(t *testing.T) {
 		IsActive:    types.BoolValue(false),
 		ReadGroups:  types.ListNull(types.StringType),
 		WriteGroups: types.ListNull(types.StringType),
+		ReadUsers:   types.ListNull(types.StringType),
+		WriteUsers:  types.ListNull(types.StringType),
 		PublicRead:  types.BoolValue(true),
 		PublicWrite: types.BoolValue(false),
 	}
@@ -323,6 +325,8 @@ func TestSkillFormFromPlan_NoAccessControlWithoutSharing(t *testing.T) {
 		IsActive:    types.BoolNull(),
 		ReadGroups:  types.ListNull(types.StringType),
 		WriteGroups: types.ListNull(types.StringType),
+		ReadUsers:   types.ListNull(types.StringType),
+		WriteUsers:  types.ListNull(types.StringType),
 		PublicRead:  types.BoolValue(false),
 		PublicWrite: types.BoolValue(false),
 	}

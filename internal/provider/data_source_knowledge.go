@@ -75,6 +75,16 @@ func (d *knowledgeDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Computed:    true,
 				Description: "Write-access group names currently applied to this knowledge base.",
 			},
+			"read_users": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: "Read-access user email addresses currently applied to this knowledge base.",
+			},
+			"write_users": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: "Write-access user email addresses currently applied to this knowledge base.",
+			},
 			"public_read": schema.BoolAttribute{
 				Computed:    true,
 				Description: "Whether every signed-in user can read the knowledge base.",

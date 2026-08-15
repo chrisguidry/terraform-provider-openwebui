@@ -73,6 +73,8 @@ func TestKnowledgeModelMatchesSchema(t *testing.T) {
 	model := knowledgeResourceModel{
 		ReadGroups:  types.ListNull(types.StringType),
 		WriteGroups: types.ListNull(types.StringType),
+		ReadUsers:   types.ListNull(types.StringType),
+		WriteUsers:  types.ListNull(types.StringType),
 	}
 
 	state := tfsdk.State{Schema: knowledgeResourceSchema(t).Schema}

@@ -10,6 +10,16 @@ resource "openwebui_channel" "announcements" {
   write_groups = ["Parents"]
 }
 
+# A channel shared with two accounts by name. An account that posts also reads,
+# so read_users names both.
+resource "openwebui_channel" "planning" {
+  name        = "planning"
+  description = "Trip planning"
+
+  read_users  = ["grandma@example.com", "parent@example.com"]
+  write_users = ["parent@example.com"]
+}
+
 # A channel every signed-in user can read and post in.
 resource "openwebui_channel" "watercooler" {
   name         = "watercooler"

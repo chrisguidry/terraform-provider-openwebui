@@ -76,6 +76,16 @@ func (d *promptDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Computed:    true,
 				Description: "Write-access group names currently applied to this prompt.",
 			},
+			"read_users": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: "Read-access user email addresses currently applied to this prompt.",
+			},
+			"write_users": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: "Write-access user email addresses currently applied to this prompt.",
+			},
 			"public_read": schema.BoolAttribute{
 				Computed:    true,
 				Description: "Whether every signed-in user can read the prompt.",

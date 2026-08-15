@@ -170,10 +170,12 @@ variable "invoices_oauth_client_secret" {
 - `public_read` (Boolean) Whether every signed-in user can use the server's tools.
 - `public_write` (Boolean) Whether every signed-in user can manage the server's tools.
 - `read_groups` (List of String) List of group names or IDs granted read access to the server's tools.
+- `read_users` (List of String) List of user email addresses or IDs granted read access to the server's tools.
 - `spec` (String) Inline OpenAPI spec as JSON text, read when `spec_type` is `json`.
 - `spec_type` (String) Where an OpenAPI server's spec comes from: `url` fetches it from `path`, `json` reads it from `spec`.
 - `type` (String) Tool server type, `openapi` or `mcp`. Defaults to `openapi`.
 - `write_groups` (List of String) List of group names or IDs granted write access to the server's tools.
+- `write_users` (List of String) List of user email addresses or IDs granted write access to the server's tools. Name the same address in `read_users` as well.
 
 ### Read-Only
 

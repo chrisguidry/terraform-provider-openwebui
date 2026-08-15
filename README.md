@@ -50,7 +50,7 @@ terraform {
   required_providers {
     openwebui = {
       source  = "chrisguidry/openwebui"
-      version = "~> 1.2"
+      version = "~> 1.4"
     }
   }
 }
@@ -229,6 +229,9 @@ resource "openwebui_model" "example" {
 
   read_groups  = ["Support"]
   write_groups = ["Support"]
+
+  # A grant can also name one account, by mail address or user ID.
+  read_users = ["contractor@example.com"]
 
   params {
     temperature = 0.1

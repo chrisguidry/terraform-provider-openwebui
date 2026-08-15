@@ -23,6 +23,10 @@ resource "openwebui_model" "example" {
   read_groups  = ["Support"]
   write_groups = ["Support"]
 
+  # A grant can also name one account. Write the mail address the account signs
+  # in with, or its user ID.
+  read_users = ["contractor@example.com"]
+
   # Skills the model loads with every conversation, by skill_id.
   skill_ids = ["code-review"]
 
@@ -61,12 +65,14 @@ resource "openwebui_model" "example" {
 - `profile_image_url` (String) URL of the model's profile image. Open WebUI accepts an empty string, `/user.png`, `/favicon.png`, `/static/favicon.png`, `/api/v1/users/{id}/profile/image`, an `http(s)` URL with a host, or a `data:image/{png,jpeg,gif,webp};base64,` URI. It drops anything else without an error.
 - `public_read` (Boolean) Whether every signed-in user can read the model. This is what the web UI calls public sharing.
 - `public_write` (Boolean) Whether every signed-in user can edit the model.
-- `read_groups` (List of String) List of group names or IDs granted read access. With no groups and neither `public_read` nor `public_write`, the model is visible to its owner and to admins only.
+- `read_groups` (List of String) List of group names or IDs granted read access. With no groups, no users, and neither `public_read` nor `public_write`, the model is visible to its owner and to admins only.
+- `read_users` (List of String) List of user email addresses or IDs granted read access.
 - `skill_ids` (List of String) List of skill IDs to attach to the model by default.
 - `suggestion_prompts` (List of String) List of suggested starter prompts shown when the model is selected.
 - `tags` (List of String) List of tags for categorising the model.
 - `tool_ids` (List of String) List of tool IDs to attach to the model by default.
 - `write_groups` (List of String) List of group names or IDs granted write access.
+- `write_users` (List of String) List of user email addresses or IDs granted write access. Name the same address in `read_users` as well.
 
 ### Read-Only
 

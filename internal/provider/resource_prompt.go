@@ -38,6 +38,8 @@ type promptResourceModel struct {
 	MetaJSON    types.String `tfsdk:"meta_json"`
 	ReadGroups  types.List   `tfsdk:"read_groups"`
 	WriteGroups types.List   `tfsdk:"write_groups"`
+	ReadUsers   types.List   `tfsdk:"read_users"`
+	WriteUsers  types.List   `tfsdk:"write_users"`
 	PublicRead  types.Bool   `tfsdk:"public_read"`
 	PublicWrite types.Bool   `tfsdk:"public_write"`
 	CreatedAt   types.String `tfsdk:"created_at"`
@@ -106,6 +108,20 @@ func (r *promptResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Optional:      true,
 				Computed:      true,
 				Description:   "List of group names or IDs granted write access.",
+				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"read_users": schema.ListAttribute{
+				ElementType:   types.StringType,
+				Optional:      true,
+				Computed:      true,
+				Description:   "List of user email addresses or IDs granted read access.",
+				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"write_users": schema.ListAttribute{
+				ElementType:   types.StringType,
+				Optional:      true,
+				Computed:      true,
+				Description:   "List of user email addresses or IDs granted write access. Name the same address in `read_users` as well.",
 				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"public_read": schema.BoolAttribute{
@@ -189,12 +205,14 @@ func (r *promptResource) Create(ctx context.Context, req resource.CreateRequest,
 		form.Meta = meta
 	}
 
-	readNames := expandStringList(ctx, plan.ReadGroups, path.Root("read_groups"), &resp.Diagnostics)
-	writeNames := expandStringList(ctx, plan.WriteGroups, path.Root("write_groups"), &resp.Diagnostics)
-	readIDs := resolveGroupNamesToIDs(ctx, r.client, readNames, path.Root("read_groups"), &resp.Diagnostics)
-	writeIDs := resolveGroupNamesToIDs(ctx, r.client, writeNames, path.Root("write_groups"), &resp.Diagnostics)
+	principals := resolveAccessPrincipals(ctx, r.client, accessPrincipalLists{
+		ReadGroups:  plan.ReadGroups,
+		WriteGroups: plan.WriteGroups,
+		ReadUsers:   plan.ReadUsers,
+		WriteUsers:  plan.WriteUsers,
+	}, &resp.Diagnostics)
 
-	form.AccessControl = withPublicAccess(buildAccessControl(readIDs, writeIDs), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
+	form.AccessControl = withPublicAccess(buildAccessControl(principals), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -293,12 +311,14 @@ func (r *promptResource) Update(ctx context.Context, req resource.UpdateRequest,
 		form.Meta = meta
 	}
 
-	readNames := expandStringList(ctx, plan.ReadGroups, path.Root("read_groups"), &resp.Diagnostics)
-	writeNames := expandStringList(ctx, plan.WriteGroups, path.Root("write_groups"), &resp.Diagnostics)
-	readIDs := resolveGroupNamesToIDs(ctx, r.client, readNames, path.Root("read_groups"), &resp.Diagnostics)
-	writeIDs := resolveGroupNamesToIDs(ctx, r.client, writeNames, path.Root("write_groups"), &resp.Diagnostics)
+	principals := resolveAccessPrincipals(ctx, r.client, accessPrincipalLists{
+		ReadGroups:  plan.ReadGroups,
+		WriteGroups: plan.WriteGroups,
+		ReadUsers:   plan.ReadUsers,
+		WriteUsers:  plan.WriteUsers,
+	}, &resp.Diagnostics)
 
-	form.AccessControl = withPublicAccess(buildAccessControl(readIDs, writeIDs), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
+	form.AccessControl = withPublicAccess(buildAccessControl(principals), plan.PublicRead.ValueBool(), plan.PublicWrite.ValueBool())
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -350,31 +370,8 @@ func (r *promptResource) ImportState(ctx context.Context, req resource.ImportSta
 func promptResponseToModel(ctx context.Context, apiClient *client.Client, resp *client.PromptModel) (promptResourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	readIDs := extractGroupIDsFromAccessControl(resp.AccessControl, "read")
-	writeIDs := extractGroupIDsFromAccessControl(resp.AccessControl, "write")
-
-	readNames, readDiags := fetchGroupNamesForIDs(ctx, apiClient, readIDs)
-	diags.Append(readDiags...)
-	writeNames, writeDiags := fetchGroupNamesForIDs(ctx, apiClient, writeIDs)
-	diags.Append(writeDiags...)
-
-	readList := types.ListNull(types.StringType)
-	if len(readNames) > 0 {
-		l, listDiags := types.ListValueFrom(ctx, types.StringType, readNames)
-		diags.Append(listDiags...)
-		if !listDiags.HasError() {
-			readList = l
-		}
-	}
-
-	writeList := types.ListNull(types.StringType)
-	if len(writeNames) > 0 {
-		l, listDiags := types.ListValueFrom(ctx, types.StringType, writeNames)
-		diags.Append(listDiags...)
-		if !listDiags.HasError() {
-			writeList = l
-		}
-	}
+	shared, sharedDiags := readAccessPrincipals(ctx, apiClient, resp.AccessControl)
+	diags.Append(sharedDiags...)
 
 	state := promptResourceModel{
 		ID:      types.StringValue(resp.ID),
@@ -391,8 +388,10 @@ func promptResponseToModel(ctx context.Context, apiClient *client.Client, resp *
 			l, _ := types.ListValueFrom(ctx, types.StringType, resp.Tags)
 			return l
 		}(),
-		ReadGroups:  readList,
-		WriteGroups: writeList,
+		ReadGroups:  nullableAccessList(ctx, shared.ReadGroups, &diags),
+		WriteGroups: nullableAccessList(ctx, shared.WriteGroups, &diags),
+		ReadUsers:   nullableAccessList(ctx, shared.ReadUsers, &diags),
+		WriteUsers:  nullableAccessList(ctx, shared.WriteUsers, &diags),
 		PublicRead:  types.BoolValue(publicAccessFromControl(resp.AccessControl, "read")),
 		PublicWrite: types.BoolValue(publicAccessFromControl(resp.AccessControl, "write")),
 		CreatedAt:   formatDateValue(resp.CreatedAt),

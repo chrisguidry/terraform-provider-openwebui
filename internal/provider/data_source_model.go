@@ -91,6 +91,16 @@ func (d *modelDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				Computed:    true,
 				Description: "Write-access group names.",
 			},
+			"read_users": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: "Read-access user email addresses.",
+			},
+			"write_users": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: "Write-access user email addresses.",
+			},
 			"public_read": schema.BoolAttribute{
 				Computed:    true,
 				Description: "Whether every signed-in user can read the model.",

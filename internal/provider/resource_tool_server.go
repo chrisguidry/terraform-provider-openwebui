@@ -59,6 +59,8 @@ type toolServerResourceModel struct {
 	OAuthClientInfo        types.String `tfsdk:"oauth_client_info"`
 	ReadGroups             types.List   `tfsdk:"read_groups"`
 	WriteGroups            types.List   `tfsdk:"write_groups"`
+	ReadUsers              types.List   `tfsdk:"read_users"`
+	WriteUsers             types.List   `tfsdk:"write_users"`
 	PublicRead             types.Bool   `tfsdk:"public_read"`
 	PublicWrite            types.Bool   `tfsdk:"public_write"`
 }
@@ -285,6 +287,22 @@ func (r *toolServerResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Computed:            true,
 				Description:         "List of group names or IDs granted write access to the server's tools.",
 				MarkdownDescription: "List of group names or IDs granted write access to the server's tools.",
+				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"read_users": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "List of user email addresses or IDs granted read access to the server's tools.",
+				MarkdownDescription: "List of user email addresses or IDs granted read access to the server's tools.",
+				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"write_users": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "List of user email addresses or IDs granted write access to the server's tools. Name the same address in `read_users` as well.",
+				MarkdownDescription: "List of user email addresses or IDs granted write access to the server's tools. Name the same address in `read_users` as well.",
 				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"public_read": schema.BoolAttribute{
@@ -572,14 +590,16 @@ func toolServerEntryFromPlan(ctx context.Context, apiClient *client.Client, plan
 		entry["spec"] = value
 	}
 
-	readNames := expandStringList(ctx, plan.ReadGroups, path.Root("read_groups"), diags)
-	writeNames := expandStringList(ctx, plan.WriteGroups, path.Root("write_groups"), diags)
-	readIDs := resolveGroupNamesToIDs(ctx, apiClient, readNames, path.Root("read_groups"), diags)
-	writeIDs := resolveGroupNamesToIDs(ctx, apiClient, writeNames, path.Root("write_groups"), diags)
+	principals := resolveAccessPrincipals(ctx, apiClient, accessPrincipalLists{
+		ReadGroups:  plan.ReadGroups,
+		WriteGroups: plan.WriteGroups,
+		ReadUsers:   plan.ReadUsers,
+		WriteUsers:  plan.WriteUsers,
+	}, diags)
 
 	publicRead := toolServerKnownBool(plan.PublicRead)
 	publicWrite := toolServerKnownBool(plan.PublicWrite)
-	accessControl := withPublicAccess(buildAccessControl(readIDs, writeIDs), publicRead, publicWrite)
+	accessControl := withPublicAccess(buildAccessControl(principals), publicRead, publicWrite)
 
 	enabled := true
 	if !plan.Enabled.IsNull() && !plan.Enabled.IsUnknown() {
@@ -630,18 +650,8 @@ func toolServerStateFromEntry(ctx context.Context, apiClient *client.Client, ent
 	}
 
 	accessControl := client.ToolServerAccessControl(config["access_grants"])
-	readIDs := extractGroupIDsFromAccessControl(accessControl, "read")
-	writeIDs := extractGroupIDsFromAccessControl(accessControl, "write")
-
-	readNames, readDiags := fetchGroupNamesForIDs(ctx, apiClient, readIDs)
-	diags.Append(readDiags...)
-	writeNames, writeDiags := fetchGroupNamesForIDs(ctx, apiClient, writeIDs)
-	diags.Append(writeDiags...)
-
-	readList, readListDiags := flattenStringSlice(ctx, readNames)
-	diags.Append(readListDiags...)
-	writeList, writeListDiags := flattenStringSlice(ctx, writeNames)
-	diags.Append(writeListDiags...)
+	shared, sharedDiags := flattenAccessPrincipals(ctx, apiClient, accessControl)
+	diags.Append(sharedDiags...)
 
 	headersJSON, err := encodeOptionalJSONValue(entry["headers"])
 	if err != nil {
@@ -681,8 +691,10 @@ func toolServerStateFromEntry(ctx context.Context, apiClient *client.Client, ent
 		OAuthClientID:          toolServerStringValue(info, "oauth_client_id"),
 		OAuthClientSecret:      toolServerStringValue(info, "oauth_client_secret"),
 		OAuthClientInfo:        toolServerStringValue(info, "oauth_client_info"),
-		ReadGroups:             readList,
-		WriteGroups:            writeList,
+		ReadGroups:             shared.ReadGroups,
+		WriteGroups:            shared.WriteGroups,
+		ReadUsers:              shared.ReadUsers,
+		WriteUsers:             shared.WriteUsers,
 		PublicRead:             types.BoolValue(publicAccessFromControl(accessControl, "read")),
 		PublicWrite:            types.BoolValue(publicAccessFromControl(accessControl, "write")),
 	}
